@@ -6,8 +6,9 @@ Demo video
 https://www.youtube.com/watch?v=4ibpZw-iq0U    
 ![TPS-202505016-sum001](https://github.com/user-attachments/assets/19f89e2b-e8ae-47af-93b6-0b95bc228274)  
 
-Note:
-Now under development.  
+Note:  
+・Now under development.  
+・Edit mode is only available for Wall. (floor, slope, cone coming soon)
 
 
 
