@@ -1,3 +1,5 @@
+The repo. dose not contain the third party's contents(3D model, sound, image, ... )  
+  
 You can play at  
 https://opensource-lab.com/mTPS-game-sample/mVRoidnite.html  
 
