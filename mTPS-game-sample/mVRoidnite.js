@@ -27,17 +27,17 @@ function mbuttonAction(){
 }*/
 
 //--- VRM model
-const loaderGLTF = VROID.loaderGLTF; 
+//const loaderGLTF = VROID.loaderGLTF; 
 //const gltfVrm = VROID.gltfVrm;
 //    console.log("gltfVrm:", gltfVrm);
-let vrm = VROID.vrm;
-let arrayGltfVrma = VROID.arrayGltfVrma;
+//let vrm = VROID.vrm;
+//let arrayGltfVrma = VROID.arrayGltfVrma;
 
 
 game();
 
 //window.addEventListener('DOMContentLoaded', init);
-function game() {
+async function game() {
 
     window.onkeydown = function(e) {
         if (e.keyCode == 9)
@@ -388,23 +388,27 @@ function game() {
 
     
     //--- VRM model
-    let modelVRM = VROID.modelVRM;
+    //let vrm = VROID.vrm;
+    //let arrayActionVRM = VROID.arrayActionVRM;
+    //let mixerVRM = VROID.mixerVRM;
+    //let modelVRM = VROID.modelVRM;
+
+
+    let {vrm, arrayActionVRM, mixerVRM} = await VROID.mCreateVRM();
+
+    let modelVRM = vrm.scene;
     modelVRM.position.set(0, -playerRadius*2.5, 0);
     playerMesh.add(modelVRM);  
 
-    // load VRMA
-    let arrayActionVRM = VROID.arrayActionVRM;
-    let mixerVRM = VROID.mixerVRM;
     
+    c_player.vrm = vrm;
     c_player.model = modelVRM;
     c_player.angle_offset_init = -Math.PI;
     //arrayAction = arrayActionVRM;
     c_player.arrayAction = arrayActionVRM;
     c_player.mixerVRM = mixerVRM;
-    c_player.vrm = vrm;
     modelVRM.visible = true;
 
-    //c_player.weaponMesh = VROID.weaponMesh;
      
 
     //--- Global Axis ---//
