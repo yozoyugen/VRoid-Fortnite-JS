@@ -114,6 +114,10 @@ function game() {
         audioSource.start();
     }
 
+    const textureLoader = new THREE.TextureLoader();
+    const firingTexture = textureLoader.load('/mTPS-game-sample/image/fire4.jpg');
+
+
 
     
     let width = window.innerWidth;
@@ -300,7 +304,7 @@ function game() {
 
     //--- Character model ---//
     let playerMesh = new THREE.Group();
-    let playerRadius = 0.35 * mScale;
+    let playerRadius = 0.3 * mScale; //0.35 * mScale;
     let playerRight = new THREE.Group();
     let playerPiv1 = new THREE.Group();
     let playerPiv2 = new THREE.Group();
@@ -316,7 +320,7 @@ function game() {
     c_player.isMoving = false;
     c_player.moveStartTime = -1;
     c_player.isGrounded = false;
-    c_player.isOnSlope = false;
+    //c_player.isOnSlope = false;
     c_player.isJump = false;
     c_player.isCrouch = false;
     c_player.slidingPressedTime = -1;
@@ -341,9 +345,14 @@ function game() {
     c_player.edit_build_id = -1;
     c_player.zWallGrid = null;
     c_player.xWallGrid = null;
+    c_player.FloorGrid = null;
+    c_player.SlopeGrid = null;
+    c_player.slopeGridSelectOrder = [];
+    c_player.ConeGrid = null;
     c_player.editCollider = new Object();
     c_player.editSelectMode = false;
     c_player.nowEdit = false;
+    c_player.weaponChange = false;
 
 
     let mixer;
@@ -530,6 +539,10 @@ function game() {
         b.player_id = player_id;
         //ArrayBuild[col.handle] = b;
         b.wallEditGridSelected = new Array(9).fill(false);
+        b.floorEditGridSelected = new Array(4).fill(false);
+        b.slopeEditGridSelected = new Array(8).fill(true);
+        b.slopeGridSelectOrder = [];
+        b.coneEditGridSelected = new Array(4).fill(false);
         b.lastEditGridSelected = [];
         ArrayBuild[build_id] = b;
         build_id += 1; 
@@ -741,12 +754,14 @@ function game() {
     //--- Player
     let ArrayPlayerCollider = [];
     let playerBodyMesh = new THREE.Group();
-    let playerCapsuleH = playerRadius*3; //playerRadius*3;
+    let playerCapsuleH = playerRadius*3.3; //playerRadius*3;
+    let playerCapsuleSquatH = playerRadius*2.0;
+    let dy_squat = -(playerCapsuleH-playerCapsuleSquatH)/2
         const playerBodyStandMesh = new THREE.Mesh(new THREE.CapsuleGeometry(playerRadius, playerCapsuleH), new THREE.MeshBasicMaterial({color: "cyan", wireframe: true}))
         playerBodyStandMesh.castShadow = false
         playerBodyMesh.add(playerBodyStandMesh);
-            const playerBodySquatMesh = new THREE.Mesh(new THREE.CapsuleGeometry(playerRadius, playerRadius*1.5), new THREE.MeshBasicMaterial({color: 'red', wireframe: true}))
-            playerBodySquatMesh.position.set(0, -playerRadius*0.75, 0);
+            const playerBodySquatMesh = new THREE.Mesh(new THREE.CapsuleGeometry(playerRadius, playerCapsuleSquatH), new THREE.MeshBasicMaterial({color: 'red', wireframe: true}))
+            playerBodySquatMesh.position.set(0, dy_squat, 0); //-playerRadius*0.75
             playerBodySquatMesh.castShadow = false
             playerBodySquatMesh.visible = false
             playerBodyMesh.add(playerBodySquatMesh)
@@ -763,7 +778,7 @@ function game() {
         //console.log("playerCollider.handle:%o", playerCollider.handle)
         console.log("playerCollider.handle:", playerCollider)
 
-        const playerSquatShape = RAPIER.ColliderDesc.capsule(playerRadius*0.75, playerRadius).setMass(1.0).setTranslation(0.0, -playerRadius*0.75, 0.0).setRestitution(0.0).setFriction(2.0)
+        const playerSquatShape = RAPIER.ColliderDesc.capsule(playerCapsuleSquatH/2, playerRadius).setMass(1.0).setTranslation(0.0, dy_squat, 0.0).setRestitution(0.0).setFriction(2.0)
         //const playerSquatShape = RAPIER.ColliderDesc.capsule(playerRadius*0.75, playerRadius).setMass(1.0).setTranslation(0.0, -playerRadius*0, 0.0).setRestitution(0.0).setFriction(2.0)
         playerSquatShape.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
         let playerSquatCollider = world.createCollider(playerSquatShape, playerBody);
@@ -962,11 +977,17 @@ function game() {
             mFinishEditMode();
         }
         c_player.mode = 1;
+        if(c_player.weapon != weapon){ //weapon change
+            c_player.weaponChange = true;
+            if(weapon==0){
+                mPlayAudioBuffer(mArrayAudio[5])
+            }
+        }
         c_player.weapon = weapon;
         if(c_player.buildTemp != null){
             c_player.buildTemp.visible = false;
         }
-        console.log('c_player.weapon:', c_player.weapon);
+        console.log('c_player.weapon:', c_player.weapon, ", ", c_player.weaponChange);
     }
 
     function mBuildModeWall(){
@@ -1029,6 +1050,12 @@ function game() {
             mPlayAudioBuffer(mArrayAudio[7])
             if(c_player.edit_build_type == 0){
                 mSetWallEditGrid(c_player);
+            }else if(c_player.edit_build_type == 1){
+                mSetFloorEditGrid(c_player);
+            }else if(c_player.edit_build_type == 2){
+                mSetSlopeEditGrid(c_player);
+            }else if(c_player.edit_build_type == 3){
+                mSetConeEditGrid(c_player);
             }
             
         }else if(c_player.mode == 3){
@@ -1041,10 +1068,16 @@ function game() {
 
         mApplyEditShape(c_player)
         c_player.nowEdit = false;
-        c_player.mode = c_player.lastMode;
+        
         if(c_player.edit_build_type == 0){
             c_player.zWallGrid.visible = false;
             c_player.xWallGrid.visible = false;
+        }else if(c_player.edit_build_type == 1){
+            c_player.FloorGrid.visible = false;
+        }else if(c_player.edit_build_type == 2){
+            c_player.SlopeGrid.visible = false;
+        }else if(c_player.edit_build_type == 3){
+            c_player.ConeGrid.visible = false;
         }
         
         let b = ArrayBuild[c_player.edit_build_id];
@@ -1057,6 +1090,11 @@ function game() {
             mPlayAudioBuffer(mArrayAudio[10]); // open door
         }
 
+        c_player.mode = c_player.lastMode;
+        if(c_player.mode == 1 && c_player.weapon==0){
+            c_player.weaponChange = true;
+            mPlayAudioBuffer(mArrayAudio[5])
+        }
     }
 
     //--- Mouse event ---//
@@ -1075,6 +1113,9 @@ function game() {
     BUILD.mInitEditGrid(c_player);
     scene.add(c_player.zWallGrid);
     scene.add(c_player.xWallGrid);
+    scene.add(c_player.FloorGrid);
+    scene.add(c_player.SlopeGrid);
+    scene.add(c_player.ConeGrid);
 
     mInitEditCollider(c_player);
 
@@ -1271,7 +1312,7 @@ function game() {
 
     const clock = new THREE.Clock();
     let delta
-    let player_speed = mScale * 5; // [/ms]
+    let player_speed = mScale * 5.5; // 5 [/ms]
     let last_game_time = new Date().getTime(); //[ms]
     let current_game_time = new Date().getTime(); //[ms]
     let playerLastPosition = new THREE.Vector3(0,0,0)
@@ -1305,6 +1346,7 @@ function game() {
 
     tick();
     function tick() {
+        
         stats.begin();
 
         if (world==null){
@@ -1350,7 +1392,7 @@ function game() {
         //}
 
         //if( t%100 == 0){
-            //c_player.isGrounded = false;
+            c_player.isGrounded = false;
             //c_player.isOnSlope = false;
             
             eventQueue.drainContactForceEvents(event => {
@@ -1371,11 +1413,11 @@ function game() {
                             lastGroundedTime = time_now;
                             c_player.isGrounded = true;
                         
-                            if( Math.abs(event.totalForce().x) > 1.0 || Math.abs(event.totalForce().z) > 1.0){
-                                c_player.isOnSlope = true;
-                            }else{
-                                c_player.isOnSlope = false;
-                            }
+                            //if( Math.abs(event.totalForce().x) > 1.0 || Math.abs(event.totalForce().z) > 1.0){
+                            //    c_player.isOnSlope = true;
+                            //}else{
+                            //    c_player.isOnSlope = false;
+                            //}
                         }
                     }
                 } //i
@@ -1443,7 +1485,7 @@ function game() {
             if(current_game_time > lastGroundedTime + 10  ){ // Fall
                 //console.log("Fall:")
                 c_player.isGrounded = false;
-                c_player.isOnSlope = false;
+                //c_player.isOnSlope = false;
                 mPlayerIsNotGrounded()
             }    
 
@@ -1455,7 +1497,7 @@ function game() {
             if(c_player.isJump){
                 //console.log('jump');
                 c_player.isGrounded = false;
-                c_player.isOnSlope = false;
+                //c_player.isOnSlope = false;
                 c_player.isCrouch = false;
                 mPlayerIsNotGrounded()
                 let vx = playerBody.linvel().x;
@@ -1504,6 +1546,15 @@ function game() {
             let a1 = c_player.angle;
             let s = playerBody.linvel();
             //console.log("playerBody.linvel():%o", playerBody.linvel());
+            let move_angle = 0;
+            let s_mag = Math.sqrt(s.x*s.x+s.y*s.y+s.z*s.z);
+            if(s_mag > 0.1){  //1
+                //move_angle = Math.acos(Math.sqrt(s.x*s.x+s.z*s.z) / s_mag );
+                move_angle = Math.asin( s.y / s_mag );
+                move_angle = Math.max(move_angle, -slope_ang);
+                move_angle = Math.min(move_angle, slope_ang);
+            }
+            //console.log("move_angle:", move_angle/Math.PI*180, ", s.y:", s.y);
 
             if(s.y < -10){
                 playerBody.setLinvel({ x: s.x, y: -10, z: s.z}, true);
@@ -1532,15 +1583,19 @@ function game() {
             if(c_player.isGrounded){
                 //console.log('input');
                 playerBody.setLinvel({ x: input_sx, y: s.y, z: input_sz}, true);
+                //console.log('input_sz:', input_sz, ", s.z:", s.z);
 
                 let ctr_collider = playerCollider;
                 if(c_player.isCrouch || c_player.isSliding){
                     ctr_collider = playerSquatCollider;
                 }
-                let desiredTranslation = new RAPIER.Vector3(input_sx*delta, s.y*delta, input_sz*delta);
+                //let desiredTranslation = new RAPIER.Vector3(input_sx*delta, s.y*delta, input_sz*delta);
+                let desiredTranslation = new RAPIER.Vector3(input_sx*delta, 
+                                                            Math.sqrt(input_sx*input_sx+input_sz*input_sz)*Math.tan(move_angle) *delta, 
+                                                            input_sz*delta);
                 let characterController = world.createCharacterController(0.0);
-                characterController.setMaxSlopeClimbAngle(45 * Math.PI / 180);
-                //characterController.enableSnapToGround(0.001);
+                characterController.setMaxSlopeClimbAngle(60 * Math.PI / 180);
+                //characterController.enableSnapToGround(0.001); 
                 characterController.computeColliderMovement(
                     ctr_collider,    // The collider we would like to move.
                     desiredTranslation, // The movement we would like to apply if there wasn’t any obstacle.
@@ -1552,7 +1607,23 @@ function game() {
                 if(delta>0){
                     //console.log("correctedMovement:", correctedMovement);
                     //console.log("correctedVel:", correctedMovement.z/delta);
-                    playerBody.setLinvel({ x: correctedMovement.x/delta, y: correctedMovement.y/delta, z: correctedMovement.z/delta}, true);
+                    let vx = correctedMovement.x/delta;
+                    let vy = correctedMovement.y/delta;
+                    let vz = correctedMovement.z/delta;
+                    //let vmag = Math.sqrt(vx*vx+vy*vy+vz*vz);
+                        //console.log("vmag:", vmag);
+                    let vpmag = Math.sqrt(vx*vx+vz*vz);
+                        //console.log("vpmag:", vpmag);
+                    let desiremag = Math.sqrt(input_sx*input_sx+input_sz*input_sz);
+                        //console.log("desiremag:", desiremag);
+                    let a = 1.0;
+                    if(desiremag > 4.9){
+                        //a = desiremag / vpmag;
+                        //console.log("vpmag:", vpmag);
+                        //console.log("desiremag:", desiremag);
+                        //console.log("a:", a);
+                    }
+                    playerBody.setLinvel({ x: vx*a, y: vy*a, z: vz*a}, true);
                 }
 
             }else{
@@ -1732,9 +1803,10 @@ function game() {
 
             //--- Edit ---//
             if(c_player.mode == 3){
-                if( c_player.edit_build_type == 0 ){
-                    mSelectWallEditGrid(c_player);
-                }
+                //if( c_player.edit_build_type == 0 ){
+                //    mSelectWallEditGrid(c_player);
+                //}
+                mSelectEditGrid(c_player);
 
             }
 
@@ -1748,7 +1820,10 @@ function game() {
                                light_pos0.y + playerNewPosition.y, 
                                light_pos0.z + playerNewPosition.z);
  
-        }
+        } //if (playerMesh != null)
+
+        //stats.begin();
+
         renderer.render(scene, camera);
         requestAnimationFrame(tick);
 
@@ -1790,12 +1865,13 @@ function game() {
         const direction = new THREE.Vector3().subVectors(point2, point1);
         direction.normalize();
         //console.log("direction:", direction);
-        const radius = 0.01; // Example radius
+        const radius = 0.015; // Example radius
         const height = distance;
         const geometry = new THREE.CylinderGeometry(radius, radius, height, 6, 1); 
-        const material = new THREE.MeshStandardMaterial({ color: "orange" }); // Example material
+        //const material = new THREE.MeshStandardMaterial({ color: "orange" }); // Example material
+        const material = new THREE.MeshStandardMaterial({ map: firingTexture, side: THREE.DoubleSide }); // Example material
         material.transparent = true;
-        material.opacity = 0.5;
+        material.opacity = 0.8;
         const cylinder = new THREE.Mesh(geometry, material);
         const cylinderDefaultAxis = new THREE.Vector3(0, 1, 0);
         const quaternion = new THREE.Quaternion();
@@ -2043,12 +2119,15 @@ function game() {
 
             //let hitPoint = ray.pointAt(hit.timeOfImpact);
             if( b!=null && L < grid_size && b.player_id == player.player_id &&
-                b.buildType==0 ){
+                (b.buildType==0 || b.buildType==1 || b.buildType==2 || b.buildType==3) ){
 
                 player.edit_build_id = b.build_id;
                 player.edit_build_type = b.buildType;
                 b.buildMesh.visible = false;
                 judge = true;
+                if(b.buildType==2){
+                    b.slopeGridSelectOrder = [];
+                }
 
                 console.log("player:", player);
             }    
@@ -2099,15 +2178,71 @@ function game() {
         player.editCollider.xWall.colliders = array_col_x;
         player.editCollider.xWall.bodies = array_body_x;
 
-        world_edit.timestep = 0.0
-        world_edit.step()
-
         /*for(var i=0; i<9; i++){
             let body = player.editCollider.zWall.bodies[i];
             body.setTranslation({ x: 0.0, y: 5.0, z: 1.0 }, true);
             console.log("body:", body.translation())
         }*/
 
+        //--- Floor
+        Lz = player.editCollider.Floor.w;
+        Lx = player.editCollider.Floor.h;
+        Ly = player.editCollider.Floor.t;
+
+        let array_col_f = [];
+        let array_body_f = [];
+        for(var i=0; i<4; i++){
+            let floorBody = world_edit.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0,0,0)) //.setTranslation(px, py, pz))
+            let floorShape = RAPIER.ColliderDesc.cuboid(Lx/2, Ly/2, Lz/2).setMass(0).setRestitution(0.0).setFriction(0.0)
+            let col = world_edit.createCollider(floorShape, floorBody);
+            col.grid_id = i;
+            //col.setEnabled(false);
+            floorBody.setEnabled(false);
+            array_col_f.push(col);
+            array_body_f.push(floorBody);
+        }
+        player.editCollider.Floor.colliders = array_col_f;
+        player.editCollider.Floor.bodies = array_body_f;
+
+        //--- Slope
+        let array_col_s = [];
+        let array_body_s = [];
+        let array_size = player.editCollider.Slope.size;
+        for(var i=0; i<8; i++){
+            let slopeBody = world_edit.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0,0,0)) //.setTranslation(px, py, pz))
+            let slopeShape = RAPIER.ColliderDesc.cuboid(array_size[i*3+0]/2, array_size[i*3+1]/2, array_size[i*3+2]/2).setMass(0).setRestitution(0.0).setFriction(0.0)
+            let col = world_edit.createCollider(slopeShape, slopeBody);
+            col.grid_id = i;
+            //col.setEnabled(false);
+            slopeBody.setEnabled(false);
+            array_col_s.push(col);
+            array_body_s.push(slopeBody);
+        }
+        player.editCollider.Slope.colliders = array_col_s;
+        player.editCollider.Slope.bodies = array_body_s;
+
+        //--- Cone
+        Lz = player.editCollider.Floor.w;
+        Lx = player.editCollider.Floor.h;
+        Ly = player.editCollider.Floor.t;
+
+        let array_col_c = [];
+        let array_body_c = [];
+        for(var i=0; i<4; i++){
+            let coneBody = world_edit.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0,0,0)) //.setTranslation(px, py, pz))
+            let coneShape = RAPIER.ColliderDesc.cuboid(Lx/2, Ly/2, Lz/2).setMass(0).setRestitution(0.0).setFriction(0.0)
+            let col = world_edit.createCollider(coneShape, coneBody);
+            col.grid_id = i;
+            //col.setEnabled(false);
+            coneBody.setEnabled(false);
+            array_col_c.push(col);
+            array_body_c.push(coneBody);
+        }
+        player.editCollider.Cone.colliders = array_col_c;
+        player.editCollider.Cone.bodies = array_body_c;
+
+        world_edit.timestep = 0.0
+        world_edit.step()
     }
 
 
@@ -2148,39 +2283,174 @@ function game() {
             meshes = player.xWallGrid.children;
         }
 
-            for(var i=0; i<9; i++){
-                
-                //let body = player.editCollider.zWall.bodies[i];
-                let body = bodies[i];
-                body.setTranslation({ x: px+pos[i*3+0], y: py+pos[i*3+1], z: pz+pos[i*3+2] }, true);
-                body.setEnabled(true);
-                    //console.log("body:", body.translation())
-                    //console.log("col:", col.translation())
-                //let mesh = player.zWallGrid.children[i];
-                let mesh = meshes[i];
-                BUILD.mEditGridSelected(mesh, b.wallEditGridSelected[i]);
-
-                b.lastEditGridSelected.push(b.wallEditGridSelected[i]);
-            }
-
-            world_edit.timestep = 0.0
-            world_edit.step()  // must call to update collider position
-
-            //for(var i=0; i<9; i++){
-            //    let col = player.editCollider.zWall.colliders[i];
-            //    console.log("col:", col.translation())
-            //}
+        for(var i=0; i<9; i++){
             
+            //let body = player.editCollider.zWall.bodies[i];
+            let body = bodies[i];
+            body.setTranslation({ x: px+pos[i*3+0], y: py+pos[i*3+1], z: pz+pos[i*3+2] }, true);
+            body.setEnabled(true);
+                //console.log("body:", body.translation())
+                //console.log("col:", col.translation())
+            //let mesh = player.zWallGrid.children[i];
+            let mesh = meshes[i];
+            BUILD.mEditGridSelected(mesh, b.wallEditGridSelected[i]);
+
+            b.lastEditGridSelected.push(b.wallEditGridSelected[i]);
+        }
+
+        world_edit.timestep = 0.0
+        world_edit.step()  // must call to update collider position
+
+        //for(var i=0; i<9; i++){
+        //    let col = player.editCollider.zWall.colliders[i];
+        //    console.log("col:", col.translation())
         //}
-    
+        
         console.log("player:", player);
     }
 
+    function mSetFloorEditGrid(player){
+
+        let b = ArrayBuild[player.edit_build_id];
+        if(b==null){
+            return;
+        }
+        
+        let px = b.position.x;
+        let py = b.position.y;
+        let pz = b.position.z;
+        b.lastEditGridSelected = [];
+
+        let pos = null;
+        let bodies = null;
+        let meshes = null;
+        
+        player.FloorGrid.visible = true;
+        player.FloorGrid.position.x = px;
+        player.FloorGrid.position.y = py;
+        player.FloorGrid.position.z = pz;
+
+        pos = player.editCollider.Floor.position; 
+        console.log("pos:", pos)
+
+        bodies = player.editCollider.Floor.bodies;
+        meshes = player.FloorGrid.children;
+        
+        for(var i=0; i<4; i++){
+            
+            let body = bodies[i];
+            body.setTranslation({ x: px+pos[i*3+0], y: py+pos[i*3+1], z: pz+pos[i*3+2] }, true);
+            body.setEnabled(true);
+                //console.log("body:", body.translation())
+                //console.log("col:", col.translation())
+            let mesh = meshes[i];
+            BUILD.mEditGridSelected(mesh, b.floorEditGridSelected[i]);
+            b.lastEditGridSelected.push(b.floorEditGridSelected[i]);
+        }
+
+        world_edit.timestep = 0.0
+        world_edit.step()  // must call to update collider position
+        
+        console.log("player:", player);
+    }
+
+    function mSetSlopeEditGrid(player){
+
+        let b = ArrayBuild[player.edit_build_id];
+        if(b==null){
+            return;
+        }
+        
+        let px = b.position.x;
+        let py = b.position.y;
+        let pz = b.position.z;
+        b.lastEditGridSelected = [];
+
+        let pos = null;
+        let bodies = null;
+        let meshes = null;
+        
+        player.SlopeGrid.visible = true;
+        player.SlopeGrid.position.x = px;
+        player.SlopeGrid.position.y = py;
+        player.SlopeGrid.position.z = pz;
+
+        pos = player.editCollider.Slope.position; 
+        console.log("pos:", pos)
+
+        bodies = player.editCollider.Slope.bodies;
+        meshes = player.SlopeGrid.children;
+        
+        for(var i=0; i<8; i++){
+            
+            let body = bodies[i];
+            body.setTranslation({ x: px+pos[i*3+0], y: py+pos[i*3+1], z: pz+pos[i*3+2] }, true);
+            body.setEnabled(true);
+                //console.log("body:", body.translation())
+                //console.log("col:", col.translation())
+            let mesh = meshes[i];
+            BUILD.mEditSlopeGridSelected(mesh, b.slopeEditGridSelected[i]);
+            b.lastEditGridSelected.push(b.slopeEditGridSelected[i]);
+        }
+
+        world_edit.timestep = 0.0
+        world_edit.step()  // must call to update collider position
+        
+        console.log("player:", player);
+    }
+
+    function mSetConeEditGrid(player){
+
+        let b = ArrayBuild[player.edit_build_id];
+        if(b==null){
+            return;
+        }
+        
+        let px = b.position.x;
+        let py = b.position.y;
+        let pz = b.position.z;
+        b.lastEditGridSelected = [];
+
+        let pos = null;
+        let bodies = null;
+        let meshes = null;
+        
+        player.ConeGrid.visible = true;
+        player.ConeGrid.position.x = px;
+        player.ConeGrid.position.y = py;
+        player.ConeGrid.position.z = pz;
+
+        pos = player.editCollider.Cone.position; 
+        //console.log("pos:", pos)
+
+        bodies = player.editCollider.Cone.bodies;
+        meshes = player.ConeGrid.children;
+        
+        for(var i=0; i<4; i++){           
+            let body = bodies[i];
+            body.setTranslation({ x: px+pos[i*3+0], y: py+pos[i*3+1], z: pz+pos[i*3+2] }, true);
+            body.setEnabled(true);
+                //console.log("body:", body.translation())
+                //console.log("col:", col.translation())
+            let mesh = meshes[i];
+            BUILD.mEditConeGridSelected(mesh, b.coneEditGridSelected[i]);
+            b.lastEditGridSelected.push(b.coneEditGridSelected[i]);
+        }
+
+        world_edit.timestep = 0.0
+        world_edit.step()  // must call to update collider position
+        
+        console.log("player:", player);
+    }
+
+
     function mSetEditSelectMode(player){
 
-        if(player.edit_build_type == 2){
-            player.editSelectMode = true;
-        }
+        //if(player.edit_build_type == 2){
+        //    player.editSelectMode = true;
+        //    player.slopeGridSelectOrder = [];
+        //    return;
+        //}
 
         let {hit, ray} = mPlayerRayHit(world_edit, playerPiv1);
         if (hit != null) {
@@ -2189,13 +2459,21 @@ function game() {
             let selectMode = true;
             if(player.edit_build_type == 0){
                 selectMode = !b.wallEditGridSelected[grid_id];
+            }else if(player.edit_build_type == 1){
+                selectMode = !b.floorEditGridSelected[grid_id];
+            }else if(player.edit_build_type == 2){
+                //player.editSelectMode = true;
+                //player.slopeGridSelectOrder = [];
+            }else if(player.edit_build_type == 3){
+                selectMode = !b.coneEditGridSelected[grid_id];
             }
             player.editSelectMode = selectMode;
 
         }
     }
 
-    function mSelectWallEditGrid(player){
+    //function mSelectWallEditGrid(player){
+    function mSelectEditGrid(player){
         //console.log("mSelectWallEditGrid");
 
         if(!player.nowEdit){
@@ -2205,7 +2483,7 @@ function game() {
         let {hit, ray} = mPlayerRayHit(world_edit, playerPiv1);
         if (hit != null) {
             let grid_id = hit.collider.grid_id;
-            //console.log("grid_id:", grid_id);
+            console.log("grid_id:", grid_id);
             //console.log("hit.timeOfImpact:", hit.timeOfImpact);
             //let L = hit.timeOfImpact;
             let b = ArrayBuild[player.edit_build_id];
@@ -2215,17 +2493,120 @@ function game() {
             }  
             //let mesh = player.zWallGrid.children[grid_id];
             let mesh = null;
-            if(b.dirType == "z"){
+            if( b.buildType==0 && b.dirType == "z" ){
                 mesh = player.zWallGrid.children[grid_id];
-            }else if(b.dirType == "x"){
+            }else if(b.buildType==0 && b.dirType == "x" ){
                 mesh = player.xWallGrid.children[grid_id];
+            }else if(b.buildType==1){
+                mesh = player.FloorGrid.children[grid_id];
+            }else if(b.buildType==2){
+                mesh = player.SlopeGrid.children[grid_id];
+            }else if(b.buildType==3){
+                mesh = player.ConeGrid.children[grid_id];
             }
             
-            BUILD.mEditGridSelected(mesh, player.editSelectMode);
-            if(b.wallEditGridSelected[grid_id] != player.editSelectMode){
-                mPlayAudioBuffer(mArrayAudio[9])
+            
+            if( b.buildType==0 ){
+                BUILD.mEditGridSelected(mesh, player.editSelectMode);
+                if(b.wallEditGridSelected[grid_id] != player.editSelectMode){
+                    mPlayAudioBuffer(mArrayAudio[9])
+                }
+                b.wallEditGridSelected[grid_id] = player.editSelectMode;
+            }else if( b.buildType==1 ){
+                BUILD.mEditGridSelected(mesh, player.editSelectMode);
+                if(b.floorEditGridSelected[grid_id] != player.editSelectMode){
+                    mPlayAudioBuffer(mArrayAudio[9])
+                }
+                b.floorEditGridSelected[grid_id] = player.editSelectMode;
+            }else if( b.buildType==2 ){
+                //console.log("mSelectEditGrid, slope, grid_id:", grid_id);
+                //let s = player.slopeGridSelectOrder;
+                let s = b.slopeGridSelectOrder;
+                if( s.length == 0 ){
+                    s.push(grid_id);
+                    for(var i=0; i<8; i++){
+                        BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[i], false);
+                        b.slopeEditGridSelected[i] = false;
+                    }
+                    b.slopeEditGridSelected[grid_id] = true;
+                    BUILD.mEditSlopeGridSelected(mesh, true);
+                    mPlayAudioBuffer(mArrayAudio[9])
+                    if(s[0]<4){
+                        if(s[0]==0){
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[4], true);
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[6], true);
+                        }else if(s[0]==1){
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[5], true);
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[7], true);
+                        }else if(s[0]==2){
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[4], true);
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[5], true);
+                        }else if(s[0]==3){
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[6], true);
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[7], true);
+                        }
+                    }else{
+
+                    }
+                }else if( s.length == 1 ){
+                    if(s[0]<4){
+                        if(grid_id<4 && s[0]!=grid_id){
+                            s.push(grid_id);
+                            //b.slopeEditGridSelected[grid_id] = true;
+                            for(var i=0; i<8; i++){ //all blue
+                                BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[i], true);
+                                b.slopeEditGridSelected[i] = true;
+                            }
+                            mPlayAudioBuffer(mArrayAudio[9])
+                        }
+
+                    }else{
+                        if(grid_id>=4 && s[0]!=grid_id){
+                            s.push(grid_id);
+                            b.slopeEditGridSelected[grid_id] = true;
+                            let g = b.slopeEditGridSelected;
+                            console.log("g:", g);
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[grid_id], true);
+                            if(g[4] && g[5]){ //((s[0]==4 && s[1]==5) || (s[0]==5 && s[1]==4)){
+                                BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[2], true);
+                                g[2] = true;
+                            }else if(g[6] && g[7]){ //((s[0]==6 && s[1]==7) || (s[0]==7 && s[1]==6)){
+                                BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[3], true);
+                                g[3] = true;
+                            }else if(g[4] && g[6]) { //((s[0]==4 && s[1]==6) || (s[0]==6 && s[1]==4)){
+                                BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[0], true);
+                                g[0] = true;
+                            }else if(g[5] && g[7]) { //((s[0]==5 && s[1]==7) || (s[0]==7 && s[1]==5)){
+                                BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[1], true);
+                                g[1] = true;
+                            }               
+                            mPlayAudioBuffer(mArrayAudio[9])
+                        }
+
+                    }
+                }else if( s.length == 2 ){
+                    if(s[0]<4){
+
+                    }else{
+                        if(grid_id>=4 && s[0]!=grid_id && s[1]!=grid_id){
+                            s.push(grid_id);
+                            b.slopeEditGridSelected[grid_id] = true;
+                            BUILD.mEditSlopeGridSelected(player.SlopeGrid.children[grid_id], true);
+
+                        }
+                    }
+
+                }
+                
+
+
+            }else if( b.buildType==3 ){
+                BUILD.mEditConeGridSelected(mesh, player.editSelectMode);
+                if(b.coneEditGridSelected[grid_id] != player.editSelectMode){
+                    mPlayAudioBuffer(mArrayAudio[9])
+                }
+                b.coneEditGridSelected[grid_id] = player.editSelectMode;
             }
-            b.wallEditGridSelected[grid_id] = player.editSelectMode;
             
         }
 
@@ -2239,9 +2620,21 @@ function game() {
         }  
 
         if(b.buildType == 0){
-            let s = b.wallEditGridSelected;
+            //let s = b.wallEditGridSelected;
             for(var i=0; i<9; i++){
                 b.wallEditGridSelected[i] = false;
+            }
+        }else if(b.buildType == 1){
+            for(var i=0; i<4; i++){
+                b.floorEditGridSelected[i] = false;
+            }
+        }else if(b.buildType == 2){
+            for(var i=0; i<8; i++){
+                b.slopeEditGridSelected[i] = true;
+            }
+        }else if(b.buildType == 3){
+            for(var i=0; i<4; i++){
+                b.coneEditGridSelected[i] = false;
             }
         }
 
@@ -2254,7 +2647,21 @@ function game() {
             return;
         }  
 
+        let px = b.position.x;
+        let py = b.position.y;
+        let pz = b.position.z;
+
         if(b.buildType == 0){
+
+            let bodies = player.editCollider.zWall.bodies;  
+            if(b.dirType == "x"){
+                bodies = player.editCollider.xWall.bodies;  
+            }
+            for(var i=0; i<9; i++){
+                let body = bodies[i];
+                body.setEnabled(false);
+            }//
+
             let s = b.wallEditGridSelected;
 
             // s[8] s[7] s[6]  y+
@@ -2383,9 +2790,227 @@ function game() {
                 b.doorDir = -1;
             }
 
-            mSetEditShape(b)
-            mSetEditCollider(b)
+
+        }else if(b.buildType == 1){
+
+            let bodies = player.editCollider.Floor.bodies;     
+            for(var i=0; i<4; i++){
+                let body = bodies[i];
+                body.setEnabled(false);
+            }//
+
+            let s = b.floorEditGridSelected;
+         
+            //x+  s[2] s[3]  
+            //    s[0] s[1]   
+            //z0,x0        z+
+            
+            if( !s[2] && !s[3] &&
+                !s[0] && !s[1]    ){
+                //no edit
+                b.editType = 0;
+            }else if( !s[2] && !s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 1;
+            }else if( !s[2] && !s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 2;
+            }else if(  s[2] && !s[3] &&
+                      !s[0] && !s[1]    ){
+                b.editType = 3;
+            }else if( !s[2] &&  s[3] &&
+                      !s[0] && !s[1]    ){
+                b.editType = 4;
+            }else if( !s[2] && !s[3] &&
+                       s[0] &&  s[1]    ){
+                b.editType = 5;
+            }else if(  s[2] &&  s[3] &&
+                      !s[0] && !s[1]    ){
+                b.editType = 6;
+            }else if(  s[2] && !s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 7;
+            }else if( !s[2] &&  s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 8;
+            }else if( !s[2] &&  s[3] &&
+                       s[0] && !s[1]    ){
+                //b.editType = 9;
+            }else if(  s[2] && !s[3] &&
+                      !s[0] &&  s[1]    ){
+                //b.editType = 10;
+            }else if(  s[2] &&  s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 11;
+            }else if(  s[2] &&  s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 12;
+            }else if( !s[2] &&  s[3] &&
+                       s[0] &&  s[1]    ){
+                b.editType = 13;
+            }else if(  s[2] && !s[3] &&
+                       s[0] &&  s[1]    ){
+                b.editType = 14;
+            }else{ 
+                console.log("undefined edit shape")
+                for(var i=0; i<4; i++){
+                    b.floorEditGridSelected[i] = b.lastEditGridSelected[i];
+                }
+                return;
+            }
+            console.log("b.editType:", b.editType);
+
+        }else if(b.buildType == 2){
+
+            let bodies = player.editCollider.Slope.bodies;     
+            for(var i=0; i<8; i++){
+                let body = bodies[i];
+                body.setEnabled(false);
+            }//
+
+            //let g = b.slopeEditGridSelected;
+            let s = b.slopeGridSelectOrder;
+
+            //x+  g[6]  g[3]  g[7]
+            //    g[0]        g[1]
+            //    g[4]  g[2]  g[5]   
+            //z0,x0        z+
+
+            if(s.length == 2){
+                if( s[0]==0 ){
+                    // z+ slope                    
+                    b.editType = 0;
+                    b.dirType = "z+"
+                }else if( s[0]==1 ){
+                    // z- slope                    
+                    b.editType = 1;
+                    b.dirType = "z-"
+                }else if( s[0]==2 ){
+                    // x+ slope                    
+                    b.editType = 2;
+                    b.dirType = "x+"
+                }else if( s[0]==3 ){
+                    // x- slope                    
+                    b.editType = 3;
+                    b.dirType = "x-"
+                }else if( s[0]==4 && s[1]==5 ){
+                    // z+ slope                    
+                    b.editType = 4;
+                    b.dirType = "z+"
+                }else if( s[0]==5 && s[1]==4 ){
+                    b.editType = 5;
+                    b.dirType = "z-"
+                }else if( s[0]==5 && s[1]==7 ){
+                    b.editType = 6;
+                    b.dirType = "x+"
+                }else if( s[0]==7 && s[1]==5 ){
+                    b.editType = 7;
+                    b.dirType = "x-"
+                }else if( s[0]==7 && s[1]==6 ){
+                    b.editType = 8;
+                    b.dirType = "z-"
+                }else if( s[0]==6 && s[1]==7 ){
+                    b.editType = 9;
+                    b.dirType = "z+"
+                }else if( s[0]==6 && s[1]==4 ){
+                    b.editType = 10;
+                    b.dirType = "x-"
+                }else if( s[0]==4 && s[1]==6 ){
+                    b.editType = 11;
+                    b.dirType = "x+"
+                }
+
+            }else if(s.length == 0){
+                if(b.dirType == "z+"){
+                    b.editType = 0;
+                }else if(b.dirType == "z-"){
+                    b.editType = 1;
+                }else if(b.dirType == "x+"){
+                    b.editType = 2;
+                }else if(b.dirType == "x-"){
+                    b.editType = 3;
+                }
+
+            }
+
+            b.edgePoints = BUILD.mCreateSlopeEdgePoints(px, py, pz, b.dirType, b.editType)
+            //console.log("b.edgePoints:", b.edgePoints);
+            
+        }else if(b.buildType == 3){
+
+            let bodies = player.editCollider.Cone.bodies;     
+            for(var i=0; i<4; i++){
+                let body = bodies[i];
+                body.setEnabled(false);
+            }//
+
+            let s = b.coneEditGridSelected;
+         
+            //x+  s[2] s[3]  
+            //    s[0] s[1]   
+            //z0,x0        z+
+            
+            if( !s[2] && !s[3] &&
+                !s[0] && !s[1]    ){
+                //no edit
+                b.editType = 0;
+            }else if( !s[2] && !s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 1;
+            }else if( !s[2] && !s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 2;
+            }else if(  s[2] && !s[3] &&
+                      !s[0] && !s[1]    ){
+                b.editType = 3;
+            }else if( !s[2] &&  s[3] &&
+                      !s[0] && !s[1]    ){
+                b.editType = 4;
+            }else if( !s[2] && !s[3] &&
+                       s[0] &&  s[1]    ){
+                b.editType = 5;
+            }else if(  s[2] &&  s[3] &&
+                      !s[0] && !s[1]    ){
+                b.editType = 6;
+            }else if(  s[2] && !s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 7;
+            }else if( !s[2] &&  s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 8; 
+            }else if( !s[2] &&  s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 9;
+            }else if(  s[2] && !s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 10;
+            }else if(  s[2] &&  s[3] &&
+                      !s[0] &&  s[1]    ){
+                b.editType = 11;
+            }else if(  s[2] &&  s[3] &&
+                       s[0] && !s[1]    ){
+                b.editType = 12;
+            }else if( !s[2] &&  s[3] &&
+                       s[0] &&  s[1]    ){
+                b.editType = 13;
+            }else if(  s[2] && !s[3] &&
+                       s[0] &&  s[1]    ){
+                b.editType = 14;
+            }else{ 
+                console.log("undefined edit shape")
+                for(var i=0; i<4; i++){
+                    b.coneEditGridSelected[i] = b.lastEditGridSelected[i];
+                }
+                return;
+            }
+            console.log("b.editType:", b.editType);
+
+            b.edgePoints = BUILD.mCreateConeEdgePoints(px, py, pz, b.editType)
         }
+
+        mSetEditShape(b)
+        mSetEditCollider(b)
+        
 
     }
 
@@ -2394,9 +3019,6 @@ function game() {
         if(build.buildType==0){
             console.log("build.editType:", build.editType);
             scene.remove(build.buildMesh)
-            //build.buildMesh = null;
-            //build.buildMesh = new THREE.Mesh(new THREE.BoxGeometry(grid_size, gridH_size/2, buildThick), new THREE.MeshBasicMaterial({color: "brown"}))
-            //let mesh = new THREE.Mesh(new THREE.BoxGeometry(grid_size, gridH_size/2, buildThick), new THREE.MeshBasicMaterial({color: "brown"}));
             let mesh = BUILD.mCreateWallEditShape(build.editType, build.doorDir);
             mesh.position.x = build.body.translation().x;
             mesh.position.y = build.body.translation().y;
@@ -2404,6 +3026,36 @@ function game() {
             if(build.dirType=="x"){
                 mesh.rotation.y += -Math.PI/2;
             }
+            ArrayBuild[build.build_id].buildMesh = mesh;
+            build.buildMesh = mesh;
+            scene.add(mesh)
+        }else if(build.buildType==1){
+            console.log("build.editType:", build.editType);
+            scene.remove(build.buildMesh)
+            let mesh = BUILD.mCreateFloorEditShape(build.editType);
+            mesh.position.x = build.body.translation().x;
+            mesh.position.y = build.body.translation().y;
+            mesh.position.z = build.body.translation().z;
+            ArrayBuild[build.build_id].buildMesh = mesh;
+            build.buildMesh = mesh;
+            scene.add(mesh)
+        }else if(build.buildType==2){
+            console.log("build.editType:", build.editType);
+            scene.remove(build.buildMesh)
+            let mesh = BUILD.mCreateSlopeEditShape(build.editType);
+            mesh.position.x = build.body.translation().x;
+            mesh.position.y = build.body.translation().y;
+            mesh.position.z = build.body.translation().z;
+            ArrayBuild[build.build_id].buildMesh = mesh;
+            build.buildMesh = mesh;
+            scene.add(mesh)
+        }else if(build.buildType==3){
+            console.log("build.editType:", build.editType);
+            scene.remove(build.buildMesh)
+            let mesh = BUILD.mCreateConeEditShape(build.editType);
+            mesh.position.x = build.body.translation().x;
+            mesh.position.y = build.body.translation().y;
+            mesh.position.z = build.body.translation().z;
             ArrayBuild[build.build_id].buildMesh = mesh;
             build.buildMesh = mesh;
             scene.add(mesh)
@@ -2419,21 +3071,25 @@ function game() {
                 world.removeCollider(build.collider[i]);
             }
             mCreateWallEditCollider(build)
+        }else if(build.buildType==1){
+            for(var i=0; i<build.collider.length; i++){
+                world.removeCollider(build.collider[i]);
+            }
+            mCreateFloorEditCollider(build)
+        }else if(build.buildType==2){
+            for(var i=0; i<build.collider.length; i++){
+                world.removeCollider(build.collider[i]);
+            }
+            mCreateSlopeEditCollider(build)
+        }else if(build.buildType==3){
+            for(var i=0; i<build.collider.length; i++){
+                world.removeCollider(build.collider[i]);
+            }
+            mCreateConeEditCollider(build)
         }
     }
 
     function mCreateWallEditCollider(build){
-
-        let editType = build.editType;
-        let dirType = build.dirType;
-
-        let Lx = grid_size;
-        let Ly = gridH_size;
-        let Lz = buildThick;
-        //if(dirType == "x"){
-        //    Lz = grid_size;
-        //    Lx = buildThick;
-        //}
 
         let px = build.position.x;
         let py = build.position.y;
@@ -2494,6 +3150,134 @@ function game() {
 
     }
 
+    function mCreateFloorEditCollider(build){
+
+        let px = build.position.x;
+        let py = build.position.y;
+        let pz = build.position.z;
+
+        build.collider = [];
+        let floorBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(px, py, pz))
+
+        let N = build.buildMesh.N;
+        let Lmat = build.buildMesh.Lmat;
+        let dmat = build.buildMesh.dmat;
+
+        for(var i=0; i<N; i++){
+            let lx = Lmat[i*3+0]/2;
+            let ly = Lmat[i*3+1]/2;
+            let lz = Lmat[i*3+2]/2;
+            let dx = dmat[i*3+0];
+            let dy = dmat[i*3+1];
+            let dz = dmat[i*3+2];
+            
+            let floorShape = RAPIER.ColliderDesc.cuboid(lx, ly, lz)
+                            .setTranslation(dx, dy, dz).setMass(1).setRestitution(0.0).setFriction(0.0)
+            let col = world.createCollider(floorShape, floorBody);
+            col.build_id = build.build_id;
+            build.collider.push(col);
+        }
+        
+        let q = build.buildMesh.quaternion;
+        console.log("q", q);
+        //console.log("build.buildMesh", build.buildMesh);
+        let x = q.x;
+        let y = q.y;
+        let z = q.z;
+        let w = q.w;
+
+        floorBody.setRotation({ w: w, x: x, y: y, z: z })
+        
+    }
+
+    function mCreateSlopeEditCollider(build){
+
+        let px = build.position.x;
+        let py = build.position.y;
+        let pz = build.position.z;
+
+        build.collider = [];
+        let slopeBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(px, py, pz))
+
+        let N = build.buildMesh.N;
+        let Lmat = build.buildMesh.Lmat;
+        let dmat = build.buildMesh.dmat;
+
+        for(var i=0; i<N; i++){
+            let lx = Lmat[i*3+0]/2;
+            let ly = Lmat[i*3+1]/2;
+            let lz = Lmat[i*3+2]/2;
+            let dx = dmat[i*3+0];
+            let dy = dmat[i*3+1];
+            let dz = dmat[i*3+2];
+            
+            let slopeShape = RAPIER.ColliderDesc.cuboid(lx, ly, lz)
+                            .setTranslation(dx, dy, dz).setMass(1).setRestitution(0.0).setFriction(0.0)
+            let col = world.createCollider(slopeShape, slopeBody);
+            col.build_id = build.build_id;
+            build.collider.push(col);
+        }
+        
+        let q = build.buildMesh.quaternion;
+        console.log("q", q);
+        //console.log("build.buildMesh", build.buildMesh);
+        let x = q.x;
+        let y = q.y;
+        let z = q.z;
+        let w = q.w;
+
+        slopeBody.setRotation({ w: w, x: x, y: y, z: z })   
+    }
+
+    function mCreateConeEditCollider(build){
+
+        let px = build.position.x;
+        let py = build.position.y;
+        let pz = build.position.z;
+
+        build.collider = [];
+        let coneBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(px, py, pz))
+
+        let N = build.buildMesh.N;
+        let Lmat = build.buildMesh.Lmat;
+        let dmat = build.buildMesh.dmat;
+
+        for(var i=0; i<N; i++){
+            let lx = Lmat[i*3+0]/2;
+            let ly = Lmat[i*3+1]/2;
+            let lz = Lmat[i*3+2]/2;
+            let dx = dmat[i*3+0];
+            let dy = dmat[i*3+1];
+            let dz = dmat[i*3+2];
+            
+            let coneShape = RAPIER.ColliderDesc.cuboid(lx, ly, lz)
+                            .setTranslation(dx, dy, dz).setMass(1).setRestitution(0.0).setFriction(1.0)
+            let col = world.createCollider(coneShape, coneBody);
+            col.build_id = build.build_id;
+            build.collider.push(col);
+        }
+
+        if(N==0){
+            console.log("build.buildMesh:", build.buildMesh);
+            let vertices = build.buildMesh.children[0].geometry.attributes.position.array;
+            let indices = build.buildMesh.children[0].geometry.attributes.index.array;
+            const coneShape = RAPIER.ColliderDesc.trimesh(vertices, indices).setMass(1).setRestitution(0.0).setFriction(1.0)
+            const col = world.createCollider(coneShape, coneBody);
+            col.build_id = build.build_id;
+            build.collider.push(col);
+        }
+       
+        let q = build.buildMesh.quaternion;
+        console.log("q", q);
+        //console.log("build.buildMesh", build.buildMesh);
+        let x = q.x;
+        let y = q.y;
+        let z = q.z;
+        let w = q.w;
+
+        coneBody.setRotation({ w: w, x: x, y: y, z: z })
+        
+    }
 
 
     onResize();

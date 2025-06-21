@@ -26,6 +26,9 @@ let editGridMaterial = new THREE.MeshBasicMaterial({map: editGridUnselectedTextu
 const editGridSelectedTexture = textureLoader.load('/mTPS-game-sample/image/edit_grid_selected.jpg');
 //let editGridSelectedMaterial = new THREE.MeshBasicMaterial({color: "lightgray"}); //"deepskyblue"
 let editGridSelectedMaterial = new THREE.MeshBasicMaterial({map: editGridSelectedTexture}); //"deepskyblue"
+const editSlopeGridUnselectedTexture = textureLoader.load('/mTPS-game-sample/image/edit_slope_grid_unselected.jpg');
+let editSlopeGridUnSelectedMaterial = new THREE.MeshBasicMaterial({map: editSlopeGridUnselectedTexture}); 
+
 
 function mInitBuildTemp(player){
     let Lx = grid_size
@@ -264,7 +267,7 @@ function mCreateFloorEdgePoints(px, py, pz){
         -grid_size/2, 0, grid_size/4, 
         grid_size/4, 0, -grid_size/2,
         -grid_size/4, 0, -grid_size/2,
-        -grid_size/4, 0, grid_size/2,
+         grid_size/4, 0, grid_size/2,
         -grid_size/4, 0, grid_size/2,
     ];
     
@@ -277,29 +280,30 @@ function mCreateFloorEdgePoints(px, py, pz){
     return edgePoints;
 }
 
-function mCreateSlopeEdgePoints(px, py, pz, type="z-"){
+function mCreateSlopeEdgePoints(px, py, pz, type="z-", editType=-1){
     
     let edgePoints = [];
     // origin -> build center
+    // bottom x 2, top x 2, left x 2, right x 2
     let zmEdgePoints = [
-        grid_size/4, -gridH_size/2, grid_size/2,
         -grid_size/4, -gridH_size/2, grid_size/2,
-        grid_size/4, gridH_size/2, -grid_size/2,
+        grid_size/4, -gridH_size/2, grid_size/2,
         -grid_size/4, gridH_size/2, -grid_size/2,
-        grid_size/2, -gridH_size/4, grid_size/4,
-        grid_size/2, gridH_size/4, -grid_size/4,
+        grid_size/4, gridH_size/2, -grid_size/2,
         -grid_size/2, -gridH_size/4, grid_size/4,
         -grid_size/2, gridH_size/4, -grid_size/4,
+        grid_size/2, -gridH_size/4, grid_size/4,
+        grid_size/2, gridH_size/4, -grid_size/4,
     ];
-    let zpEdgePoints = [
-        grid_size/4, gridH_size/2, grid_size/2,
-        -grid_size/4, gridH_size/2, grid_size/2,
+    /*let zpEdgePoints = [
         grid_size/4, -gridH_size/2, -grid_size/2,
         -grid_size/4, -gridH_size/2, -grid_size/2,
-        grid_size/2, gridH_size/4, grid_size/4,
+        grid_size/4, gridH_size/2, grid_size/2,
+        -grid_size/4, gridH_size/2, grid_size/2,
         grid_size/2, -gridH_size/4, -grid_size/4,
-        -grid_size/2, gridH_size/4, grid_size/4,
+        grid_size/2, gridH_size/4, grid_size/4,
         -grid_size/2, -gridH_size/4, -grid_size/4,
+        -grid_size/2, gridH_size/4, grid_size/4,
     ];
 
     let xmEdgePoints = [
@@ -313,17 +317,17 @@ function mCreateSlopeEdgePoints(px, py, pz, type="z-"){
         -grid_size/4, gridH_size/4, -grid_size/2,
     ];
     let xpEdgePoints = [
-        grid_size/2, gridH_size/2, grid_size/4, 
-        grid_size/2, gridH_size/2, -grid_size/4, 
-        -grid_size/2, -gridH_size/2, grid_size/4, 
         -grid_size/2, -gridH_size/2, -grid_size/4,
-        grid_size/4, gridH_size/4, grid_size/2, 
-        -grid_size/4, -gridH_size/4, grid_size/2, 
-        grid_size/4, gridH_size/4, -grid_size/2, 
+        -grid_size/2, -gridH_size/2, grid_size/4, 
+        grid_size/2, gridH_size/2, -grid_size/4, 
+        grid_size/2, gridH_size/2, grid_size/4, 
         -grid_size/4, -gridH_size/4, -grid_size/2,
-    ];
+        grid_size/4, gridH_size/4, -grid_size/2, 
+        -grid_size/4, -gridH_size/4, grid_size/2, 
+        grid_size/4, gridH_size/4, grid_size/2, 
+    ];*/
 
-    if(type == "z-"){
+    /*if(type == "z-"){
         edgePoints = zmEdgePoints;
     }else if(type == "z+"){
         edgePoints = zpEdgePoints;
@@ -331,6 +335,64 @@ function mCreateSlopeEdgePoints(px, py, pz, type="z-"){
         edgePoints = xmEdgePoints;
     }else if(type == "x+"){
         edgePoints = xpEdgePoints;
+    }*/
+
+    /*let m = null;
+    if(type == "z-"){
+        m = zmEdgePoints;
+    }else if(type == "z+"){
+        m = zpEdgePoints;
+    }else if(type == "x-"){
+        m = xmEdgePoints;
+    }else if(type == "x+"){
+        m = xpEdgePoints;
+    }*/
+
+    let T = [1, 0, 0,
+             0, 1, 0,
+             0, 0, 1];
+    if(type == "z+"){
+        T = [-1, 0, 0,
+             0, 1, 0,
+             0, 0, -1];
+    }else if(type == "x-"){
+        T = [0, 0, 1,
+             0, 1, 0,
+             -1, 0, 0];
+    }else if(type == "x+"){
+        T = [0, 0, -1,
+             0, 1, 0,
+             1, 0, 0];
+    }
+
+    let m = new Array(3*8).fill(0);
+    for(var i=0; i<8; i++){
+        m[i*3+0] = T[0]*zmEdgePoints[i*3+0]
+                  +T[1]*zmEdgePoints[i*3+1]
+                  +T[2]*zmEdgePoints[i*3+2];
+        m[i*3+1] = T[3]*zmEdgePoints[i*3+0]
+                  +T[4]*zmEdgePoints[i*3+1]
+                  +T[5]*zmEdgePoints[i*3+2];
+        m[i*3+2] = T[6]*zmEdgePoints[i*3+0]
+                  +T[7]*zmEdgePoints[i*3+1]
+                  +T[8]*zmEdgePoints[i*3+2];
+    }
+
+    let idx = [0, 1, 2, 3, 4, 5, 6, 7]; // no editType 
+    if(editType>=0 && editType<=3){
+
+    }else if(editType==4 || editType==6 || editType==8 || editType==10 ){
+        // right half
+        idx = [1, 3, 6, 7];
+    }else if(editType==5 || editType==7 || editType==9 || editType==11 ){
+        // left half
+        idx = [0, 2, 4, 5];
+    }
+
+    for(var i=0; i<idx.length; i++){
+        edgePoints.push(m[idx[i]*3+0]);
+        edgePoints.push(m[idx[i]*3+1]);
+        edgePoints.push(m[idx[i]*3+2]);
     }
 
     for(var i=0; i<edgePoints.length/3; i++){
@@ -342,19 +404,143 @@ function mCreateSlopeEdgePoints(px, py, pz, type="z-"){
     return edgePoints;
 }
 
-function mCreateConeEdgePoints(px, py, pz){
-        
+function mCreateConeEdgePoints(px, py, pz, editType=0){
+    // z-x plane    
+
     // origin -> build center
-    let edgePoints = [
-        grid_size/2, -gridH_size/2, -grid_size/4, 
-        grid_size/2, -gridH_size/2, grid_size/4, 
-        -grid_size/2, -gridH_size/2, -grid_size/4, 
-        -grid_size/2, -gridH_size/2, grid_size/4, 
-        grid_size/4, -gridH_size/2, -grid_size/2,
-        -grid_size/4, -gridH_size/2, -grid_size/2,
-        -grid_size/4, -gridH_size/2, grid_size/2,
-        -grid_size/4, -gridH_size/2, grid_size/2,
+    let ep = [  //edgePoints     // x-, x+, z-, z+
+        -grid_size/2, -gridH_size/2, -grid_size/4, // x-
+        -grid_size/2, -gridH_size/2, grid_size/4,  // x-
+        grid_size/2, -gridH_size/2, -grid_size/4,  // x+
+        grid_size/2, -gridH_size/2, grid_size/4,   // x+
+        grid_size/4, -gridH_size/2, -grid_size/2,  // z-
+        -grid_size/4, -gridH_size/2, -grid_size/2, // z-
+        -grid_size/4, -gridH_size/2, grid_size/2,  // z+
+        -grid_size/4, -gridH_size/2, grid_size/2,  // z+
     ];
+
+    let edgePoints = [];
+    //let idx = [0, 1, 2, 3, 4, 5, 6, 7]; // no editType 
+    let T = [1, 0, 0,
+             0, 1, 0,
+             0, 0, 1];
+
+    if(editType==0){
+        edgePoints = ep;
+    }else if(editType>=1 && editType<=4){
+        edgePoints = [
+         grid_size/2, -gridH_size/2, -grid_size/4, // x+
+         grid_size/2, -gridH_size/2, grid_size/4,  // x+
+        -grid_size/4, -gridH_size/2, grid_size/2,  // z+
+         grid_size/4, -gridH_size/2, grid_size/2,  // z+
+         grid_size/4, -gridH_size/4, -grid_size/2,  // z-
+        -grid_size/4,  gridH_size/4, -grid_size/2,  // z-
+        -grid_size/2,  gridH_size/4, -grid_size/4,  // x-
+        -grid_size/2, -gridH_size/4,  grid_size/4,  // x-
+        ];
+        if(editType==2){
+            T = [0, 0, 1,
+                 0, 1, 0,
+                -1, 0, 0];
+        }else if(editType==3){
+            T = [0, 0, -1,
+                 0, 1, 0,
+                 1, 0, 0];
+        }else if(editType==4){
+            T = [-1, 0, 0,
+                  0, 1, 0,
+                  0, 0, -1];
+        }
+
+    }else if(editType>=5 && editType<=8){
+        // x- slope
+        edgePoints = [
+        -grid_size/2,  gridH_size/2, -grid_size/4,  // x-
+        -grid_size/2,  gridH_size/2,  grid_size/4,  // x-
+         grid_size/2, -gridH_size/2, -grid_size/4, // x+
+         grid_size/2, -gridH_size/2, grid_size/4,  // x+
+         grid_size/4, -gridH_size/4, grid_size/2,  // z+
+        -grid_size/4,  gridH_size/4, grid_size/2,  // z+
+         grid_size/4, -gridH_size/4, -grid_size/2,  // z-
+        -grid_size/4,  gridH_size/4, -grid_size/2,  // z-
+        ];
+        if(editType==8){ // +90
+            T = [0, 0, 1,
+                 0, 1, 0,
+                -1, 0, 0];
+        }else if(editType==7){
+            T = [0, 0, -1,
+                 0, 1, 0,
+                 1, 0, 0];
+        }else if(editType==6){
+            T = [-1, 0, 0,
+                  0, 1, 0,
+                  0, 0, -1];
+        }
+
+    }else if(editType==9 || editType==10){
+        edgePoints = [
+        -grid_size/2,  gridH_size/4, -grid_size/4,  // x-
+        -grid_size/2, -gridH_size/4,  grid_size/4,  // x-
+         grid_size/2, -gridH_size/4, -grid_size/4, // x+
+         grid_size/2,  gridH_size/4, grid_size/4,  // x+
+         grid_size/4,  gridH_size/4, grid_size/2,  // z+
+        -grid_size/4, -gridH_size/4, grid_size/2,  // z+
+         grid_size/4, -gridH_size/4, -grid_size/2,  // z-
+        -grid_size/4,  gridH_size/4, -grid_size/2,  // z-
+        ];
+        if(editType==10){
+            T = [0, 0, 1,
+                 0, 1, 0,
+                -1, 0, 0];
+        }
+
+    }else if(editType>=11 && editType<=14){
+        edgePoints = [
+        -grid_size/2, -gridH_size/4, -grid_size/4,  // x-
+        -grid_size/2,  gridH_size/4,  grid_size/4,  // x-
+         grid_size/2,  gridH_size/2, -grid_size/4, // x+
+         grid_size/2,  gridH_size/2, grid_size/4,  // x+
+         grid_size/4,  gridH_size/2, grid_size/2,  // z+
+        -grid_size/4,  gridH_size/2, grid_size/2,  // z+
+         grid_size/4,  gridH_size/4, -grid_size/2,  // z-
+        -grid_size/4, -gridH_size/4, -grid_size/2,  // z-
+        ];
+        if(editType==12){
+            T = [0, 0, 1,
+                 0, 1, 0,
+                -1, 0, 0];
+        }else if(editType==13){
+            T = [0, 0, -1,
+                 0, 1, 0,
+                 1, 0, 0];
+        }else if(editType==14){
+            T = [-1, 0, 0,
+                  0, 1, 0,
+                  0, 0, -1];
+        }
+    }
+
+    //for(var i=0; i<idx.length; i++){
+    //    edgePoints.push(m[idx[i]*3+0]);
+    //    edgePoints.push(m[idx[i]*3+1]);
+    //    edgePoints.push(m[idx[i]*3+2]);
+    //}
+
+    for(var i=0; i<edgePoints.length/3; i++){
+        let x = T[0]*edgePoints[i*3+0]
+               +T[1]*edgePoints[i*3+1]
+               +T[2]*edgePoints[i*3+2];
+        let y = T[3]*edgePoints[i*3+0]
+               +T[4]*edgePoints[i*3+1]
+               +T[5]*edgePoints[i*3+2];
+        let z = T[6]*edgePoints[i*3+0]
+               +T[7]*edgePoints[i*3+1]
+               +T[8]*edgePoints[i*3+2];
+        edgePoints[i*3+0] = x;
+        edgePoints[i*3+1] = y;
+        edgePoints[i*3+2] = z;
+    }
     
     for(var i=0; i<edgePoints.length/3; i++){
         edgePoints[i*3+0] += px;
@@ -917,6 +1103,7 @@ function mInitEditGrid(player){
     let Ly = gridH_size
     let Lz = buildThick
     
+    //--- Wall
     let dw = Lx * 0.01;
     let dh = Ly * 0.01;
     let zWallGrid = new THREE.Group();
@@ -969,8 +1156,131 @@ function mInitEditGrid(player){
     xWall.t = t;
     xWall.position = xPosition;
     player.editCollider.xWall = xWall;
-    console.log("player.editCollider:", player.editCollider);
+    //console.log("player.editCollider:", player.editCollider);
     
+    //--- Floor z-x plane
+    Lz = grid_size
+    Lx = grid_size
+    Ly = buildThick
+    dw = Lz * 0.01;
+    dh = Lx * 0.01;
+    let FloorGrid = new THREE.Group();
+        FloorGrid.position.set(0, 0, 0);
+    w = Lz/2 - dw*2;
+    h = Lx/2 - dh*2;
+    t = Ly;
+    let fPosition = [];
+    for(var i=0; i<2; i++){
+        for(var j=0; j<2; j++){
+            let z = Lz/2/2 + Lz/2*j - Lz/2;
+            let x = Lx/2/2 + Lx/2*i - Lx/2;
+            let mesh = new THREE.Mesh(new THREE.BoxGeometry(h, t, w), editGridMaterial);
+            mesh.position.set(x, 0, z);
+            mesh.grid_id = j + i*2;
+            FloorGrid.add(mesh);
+            fPosition.push(x);
+            fPosition.push(0);
+            fPosition.push(z);
+        }
+    }
+    console.log("FloorGrid:", FloorGrid);
+    FloorGrid.visible = false;
+    player.FloorGrid = FloorGrid;
+
+    let Floor = new Object();
+    Floor.w = w;
+    Floor.h = h;
+    Floor.t = t;
+    Floor.position = fPosition;
+    player.editCollider.Floor = Floor;
+
+    //--- Slope z-x plane
+    Lz = grid_size
+    Lx = grid_size
+    Ly = gridH_size
+    dw = Lz * 0.01;
+    dh = Lx * 0.01;
+    let SlopeGrid = new THREE.Group();
+        SlopeGrid.position.set(0, 0, 0);
+    w = Lz/5 - dw*2;
+    h = Lx/5 - dh*2;
+    t = buildThick;
+    let sPosition = [
+        0, -Ly/2+t, -w/2-dw*2-w,
+        0, -Ly/2+t, w/2+dw*2+w,
+        -w/2-dw*2-w, -Ly/2+t, 0,
+        w/2+dw*2+w, -Ly/2+t, 0,
+        -w/2-dw*2-w, -Ly/2+t, -w/2-dw*2-w,
+        -w/2-dw*2-w, -Ly/2+t, w/2+dw*2+w,
+        w/2+dw*2+w, -Ly/2+t, -w/2-dw*2-w,
+        w/2+dw*2+w, -Ly/2+t, w/2+dw*2+w,
+    ];
+
+    let array_size = [
+        h, t, 2*w,
+        h, t, 2*w,
+        2*h, t, w,
+        2*h, t, w,
+        2*h, t, 2*w,
+        2*h, t, 2*w,
+        2*h, t, 2*w,
+        2*h, t, 2*w,
+    ];
+
+    for(var i=0; i<8; i++){
+        let mesh = new THREE.Mesh(new THREE.BoxGeometry(array_size[i*3+0], array_size[i*3+1], array_size[i*3+2]), editGridMaterial);
+        mesh.position.set(sPosition[i*3+0], sPosition[i*3+1], sPosition[i*3+2]);
+        mesh.grid_id = i;
+        SlopeGrid.add(mesh);
+    }
+    
+    console.log("SlopeGrid:", SlopeGrid);
+    SlopeGrid.visible = false;
+    player.SlopeGrid = SlopeGrid;
+
+    let Slope = new Object();
+    Slope.size = array_size;
+    Slope.position = sPosition;
+    player.editCollider.Slope = Slope;
+
+    //--- Cone z-x plane
+    Lz = grid_size
+    Lx = grid_size
+    Ly = gridH_size
+    dw = Lz * 0.01;
+    dh = Lx * 0.01;
+    let ConeGrid = new THREE.Group();
+        ConeGrid.position.set(0, 0, 0);
+    w = Lz/2 - dw*2;
+    h = Lx/2 - dh*2;
+    t = buildThick;
+    let cPosition = [];
+    for(var i=0; i<2; i++){
+        for(var j=0; j<2; j++){
+            let z = Lz/2/2 + Lz/2*j - Lz/2;
+            let x = Lx/2/2 + Lx/2*i - Lx/2;
+            let mesh = new THREE.Mesh(new THREE.BoxGeometry(h, t, w), editGridMaterial);
+            mesh.position.set(x, -Ly/2+t, z);
+            mesh.grid_id = j + i*2;
+            ConeGrid.add(mesh);
+            cPosition.push(x);
+            cPosition.push(-Ly/2+t);
+            cPosition.push(z);
+        }
+    }
+    console.log("ConeGrid:", ConeGrid);
+    ConeGrid.visible = false;
+    player.ConeGrid = ConeGrid;
+
+    let Cone = new Object();
+    Cone.w = w;
+    Cone.h = h;
+    Cone.t = t;
+    Cone.position = cPosition;
+    player.editCollider.Cone = Cone;
+
+
+    console.log("player.editCollider:", player.editCollider);
 }
 
 function mEditGridSelected(mesh, judge=true){
@@ -980,6 +1290,28 @@ function mEditGridSelected(mesh, judge=true){
         mesh.material = editGridMaterial;
     }
 }
+
+function mEditSlopeGridSelected(mesh, judge=true){
+    if(judge){
+        mesh.material = editGridMaterial; // blue
+    }else{
+        mesh.material = editSlopeGridUnSelectedMaterial; // gray
+    }
+}
+
+function mEditConeGridSelected(mesh, judge=true){
+    console.log("mEditConeGridSelected")
+    //let geo = mesh.geometry;
+    //console.log("geo", geo)
+    if(judge){
+        //geo.translate(0, buildThick, 0);
+        mesh.position.y = -gridH_size/2 + buildThick * 2
+    }else{
+        //geo.translate(0, 0, 0);
+        mesh.position.y = -gridH_size/2 + buildThick * 1
+    }
+}
+
 
 function mCreateWallEditShape(editType, doorDir=1){
 
@@ -1020,21 +1352,6 @@ function mCreateWallEditShape(editType, doorDir=1){
         m = new THREE.Mesh(geo, mat2p);        
         g.add(m);
         return g;
-    }else if(editType==16){
-        let geo = new THREE.BoxGeometry(grid_size, gridH_size/3, buildThick);
-        geo.translate(0, gridH_size/3, 0);
-        let m = new THREE.Mesh(geo, mat);        
-        g.add(m);
-        geo = new THREE.BoxGeometry(grid_size/4, gridH_size, buildThick);
-        geo.translate(-grid_size/8*3, 0, 0);
-        m = new THREE.Mesh(geo, mat2p);        
-        g.add(m);
-        return g;
-    }else if(editType==18){
-        let geo = new THREE.BoxGeometry(grid_size, gridH_size/4, buildThick);
-        geo.translate(0, -gridH_size/8*3, 0);
-        let m = new THREE.Mesh(geo, mat);        
-        return m;
     }*/
     
     let Lx = grid_size;
@@ -1390,6 +1707,471 @@ function mCreateTriangleWallMesh(){
 }
 
 
+function mCreateFloorEditShape(editType){
+
+    let mat = new THREE.MeshLambertMaterial({map: buildTexture, side: THREE.DoubleSide});
+        mat.transparent = true;
+    let mat1p = new THREE.MeshLambertMaterial({map: build1pTexture, side: THREE.DoubleSide});
+        mat1p.transparent = true;
+    let mat2p = new THREE.MeshLambertMaterial({map: build2pTexture, side: THREE.DoubleSide});
+        mat2p.transparent = true;
+    let mat4p = new THREE.MeshLambertMaterial({map: build4pTexture, side: THREE.DoubleSide});
+        mat4p.transparent = true;
+    let mat_d = new THREE.MeshLambertMaterial({map: buildDoorTexture, side: THREE.DoubleSide});
+        mat_d.transparent = true;
+
+    let g = new THREE.Group();
+    g.rotation.order = "YXZ"; 
+    let N = 0;
+    let Lmat = [];
+    let dmat = [];
+    let mvec = [];
+
+    let Lx = grid_size;
+    let Ly = gridH_size;
+    let Lz = grid_size;
+    let Lt = buildThick;
+
+    if(editType==0){
+        N = 1;
+        Lmat = [Lx, Lt, Lz];
+        dmat = [0, 0, 0];
+        mvec = [mat];
+    }else if(editType==1 || editType==2 || editType==3 || editType==4){
+        N = 4;
+        Lmat = [Lx/2, Lt, Lz/2,
+                Lx/2, Lt, Lz,
+                Lx/2, Ly/4, Lt,
+                Lt, Ly/4, Lz/2,];
+        dmat = [-Lx/4, 0, Lz/4,
+                 Lx/4, 0, 0,
+                -Lx/4, Ly/8, 0,
+                 0, Ly/8, -Lz/4,];
+        mvec = [mat, mat, mat, mat];
+
+        if(editType==2){
+            g.rotation.y = Math.PI/2
+        }else if(editType==3){
+            g.rotation.y = -Math.PI/2
+        }else if(editType==4){
+            g.rotation.y = Math.PI
+        }
+    }else if(editType==5 || editType==6 || editType==7 || editType==8){
+        N = 2;
+        Lmat = [Lx/2, Lt, Lz,
+                Lt, Ly/4, Lz,];
+        dmat = [ Lx/4, 0, 0,
+                 0, Ly/8, 0,];
+        mvec = [mat, mat, ];
+
+        if(editType==6){
+            g.rotation.y = Math.PI
+        }else if(editType==7){
+            g.rotation.y = -Math.PI/2
+        }else if(editType==8){
+            g.rotation.y = Math.PI/2
+        }
+    }else if(editType==11 || editType==12 || editType==13 || editType==14){
+        N = 3;
+        Lmat = [Lx/2, Lt, Lz/2,
+                Lx/2, Ly/4, Lt,
+                Lt, Ly/4, Lz/2,];
+        dmat = [-Lx/4, 0, -Lz/4,
+                -Lx/4, Ly/8, 0,
+                 0, Ly/8, -Lz/4,];
+        mvec = [mat, mat, mat, ];
+
+        if(editType==12){
+            g.rotation.y = Math.PI/2
+        }else if(editType==13){
+            g.rotation.y = -Math.PI/2
+        }else if(editType==14){
+            g.rotation.y = Math.PI
+        }
+    }
+
+    for(var i=0; i<N; i++){
+        let lx = Lmat[i*3+0];
+        let ly = Lmat[i*3+1];
+        let lz = Lmat[i*3+2];
+        let dx = dmat[i*3+0];
+        let dy = dmat[i*3+1];
+        let dz = dmat[i*3+2];
+        
+        let geo = new THREE.BoxGeometry(lx, ly, lz);
+        geo.translate(dx, dy, dz);
+        let m = new THREE.Mesh(geo, mvec[i]);        
+        g.add(m);
+    }
+
+    g.N = N;
+    g.Lmat = Lmat;
+    g.dmat = dmat;
+
+    return g;
+}
+
+function mCreateSlopeEditShape(editType){
+
+    let mat = new THREE.MeshLambertMaterial({map: buildTexture, side: THREE.DoubleSide});
+        mat.transparent = true;
+    let mat1p = new THREE.MeshLambertMaterial({map: build1pTexture, side: THREE.DoubleSide});
+        mat1p.transparent = true;
+    let mat2p = new THREE.MeshLambertMaterial({map: build2pTexture, side: THREE.DoubleSide});
+        mat2p.transparent = true;
+    let mat4p = new THREE.MeshLambertMaterial({map: build4pTexture, side: THREE.DoubleSide});
+        mat4p.transparent = true;
+    let mat_d = new THREE.MeshLambertMaterial({map: buildDoorTexture, side: THREE.DoubleSide});
+        mat_d.transparent = true;
+
+    let g = new THREE.Group();
+    g.rotation.order = "YXZ"; 
+    let N = 0;
+    let Lmat = [];
+    let dmat = [];
+    let mvec = [];
+
+    let Lx = grid_size;
+    let Ly = gridH_size;
+    let Lz = grid_size;
+    let Lt = buildThick;
+    let L = Math.sqrt(grid_size*grid_size+gridH_size*gridH_size); 
+
+    if(editType==0 || editType==1 || editType==2 || editType==3){
+        N = 1;
+        Lmat = [Lx, Lt, L];
+        dmat = [0, 0, 0];
+        mvec = [mat];
+
+        if(editType==1){
+            g.rotation.y = Math.PI
+        }else if(editType==2){
+            g.rotation.y = Math.PI/2
+        }else if(editType==3){
+            g.rotation.y = -Math.PI/2
+        }
+        g.rotation.x = -slope_ang;
+    }else if(editType>=4  && editType<=11){
+        N = 2;
+        Lmat = [Lx/2, Lt, L,
+                Lt, Ly/4, L,];
+        dmat = [-Lx/4, 0, 0,
+                0, Ly/8, 0,];
+        mvec = [mat, mat];
+
+        if(editType==4){
+            g.rotation.y = 0;
+            g.rotation.x = -slope_ang;
+        }else if(editType==5){
+            g.rotation.y = 0;
+            g.rotation.x =  slope_ang;
+        }else if(editType==6){
+            g.rotation.y = Math.PI/2;
+            g.rotation.x = -slope_ang;
+        }else if(editType==7){
+            g.rotation.y = Math.PI/2;
+            g.rotation.x =  slope_ang;
+        }else if(editType==8){
+            g.rotation.y = Math.PI;
+            g.rotation.x = -slope_ang;
+        }else if(editType==9){
+            g.rotation.y = Math.PI;
+            g.rotation.x =  slope_ang;
+        }else if(editType==10){
+            g.rotation.y = -Math.PI/2;
+            g.rotation.x = -slope_ang;
+        }else if(editType==11){
+            g.rotation.y = -Math.PI/2;
+            g.rotation.x =  slope_ang;
+        }
+        
+    }
+
+    for(var i=0; i<N; i++){
+        let lx = Lmat[i*3+0];
+        let ly = Lmat[i*3+1];
+        let lz = Lmat[i*3+2];
+        let dx = dmat[i*3+0];
+        let dy = dmat[i*3+1];
+        let dz = dmat[i*3+2];
+        
+        let geo = new THREE.BoxGeometry(lx, ly, lz);
+        geo.translate(dx, dy, dz);
+        let m = new THREE.Mesh(geo, mvec[i]);        
+        g.add(m);
+    }
+
+    g.N = N;
+    g.Lmat = Lmat;
+    g.dmat = dmat;
+
+    return g;
+}
+
+function mCreateConeEditShape(editType){
+
+    let mat = new THREE.MeshLambertMaterial({map: buildTexture, side: THREE.DoubleSide});
+        mat.transparent = true;
+    let mat1p = new THREE.MeshLambertMaterial({map: build1pTexture, side: THREE.DoubleSide});
+        mat1p.transparent = true;
+    let mat2p = new THREE.MeshLambertMaterial({map: build2pTexture, side: THREE.DoubleSide});
+        mat2p.transparent = true;
+    let mat4p = new THREE.MeshLambertMaterial({map: build4pTexture, side: THREE.DoubleSide});
+        mat4p.transparent = true;
+    let mat_d = new THREE.MeshLambertMaterial({map: buildDoorTexture, side: THREE.DoubleSide});
+        mat_d.transparent = true;
+
+    let g = new THREE.Group();
+    g.rotation.order = "YXZ"; 
+    let N = 0;
+    let Lmat = [];
+    let dmat = [];
+    let mvec = [];
+
+    let Lx = grid_size;
+    let Ly = gridH_size;
+    let Lz = grid_size;
+    let Lt = buildThick;
+    let L = Math.sqrt(grid_size*grid_size+gridH_size*gridH_size); 
+
+    if(editType==0){
+        let geo = mCreateConeGeometry();
+        let m = new THREE.Mesh(geo, mat);        
+        g.add(m);
+    }else if(editType==1 || editType==2 || editType==3 || editType==4){
+        let m = mCreateEditConeMesh1();
+        g.add(m);
+        if(editType==2){
+            g.rotation.y = Math.PI/2
+        }else if(editType==3){
+            g.rotation.y = -Math.PI/2
+        }else if(editType==4){
+            g.rotation.y = Math.PI
+        }
+    }else if(editType==5 || editType==6 || editType==7 || editType==8){
+        N = 1;
+        Lmat = [L, Lt, Lz];
+        dmat = [0, 0, 0];
+        mvec = [mat];
+
+        if(editType==6){
+            g.rotation.y = Math.PI
+        }else if(editType==7){
+            g.rotation.y = -Math.PI/2
+        }else if(editType==8){
+            g.rotation.y = Math.PI/2
+        }
+        g.rotation.z = -slope_ang;
+    }else if(editType==9 || editType==10){
+        let m = mCreateEditConeMesh2();
+        g.add(m);
+        if(editType==10){
+            g.rotation.y = Math.PI/2
+        }
+    }else if(editType==11 || editType==12 || editType==13 || editType==14){
+        let m = mCreateEditConeMesh3();
+        g.add(m);
+        if(editType==12){
+            g.rotation.y = Math.PI/2
+        }else if(editType==13){
+            g.rotation.y = -Math.PI/2
+        }else if(editType==14){
+            g.rotation.y = Math.PI
+        }
+    }
+
+    for(var i=0; i<N; i++){
+        let lx = Lmat[i*3+0];
+        let ly = Lmat[i*3+1];
+        let lz = Lmat[i*3+2];
+        let dx = dmat[i*3+0];
+        let dy = dmat[i*3+1];
+        let dz = dmat[i*3+2];
+        
+        let geo = new THREE.BoxGeometry(lx, ly, lz);
+        geo.translate(dx, dy, dz);
+        let m = new THREE.Mesh(geo, mvec[i]);        
+        g.add(m);
+    }
+
+    g.N = N;
+    g.Lmat = Lmat;
+    g.dmat = dmat;
+
+    return g;
+}
+
+function mCreateEditConeMesh1(){
+    // z-x plane
+
+    let Lx = grid_size;
+    let Ly = gridH_size;
+    let Lz = grid_size;
+
+    const geometry = new THREE.BufferGeometry();
+    let vertices = new Float32Array(3*2*3); // 
+    let uvs = new Float32Array(3*2*2);
+    let indices = new Uint32Array(2*3);
+    let tri_coord = [ 
+        -Lx/2,  Ly/2, -Lz/2,
+        -Lx/2, -Ly/2,  Lz/2,
+         Lx/2, -Ly/2,  Lz/2,
+
+        -Lx/2,  Ly/2, -Lz/2,
+         Lx/2, -Ly/2,  Lz/2,
+         Lx/2, -Ly/2, -Lz/2,
+        ];
+    let uv_coord = [
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 1.0,
+
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0,
+    ];
+    for(var i=0; i<tri_coord.length; i++){
+        vertices[i] = tri_coord[i];
+    }
+    for(var i=0; i<uvs.length; i++){
+        uvs[i] = uv_coord[i];
+    }
+    for(var i=0; i<indices.length; i++){
+        indices[i] = i;
+    }
+
+    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    geometry.setAttribute( 'uv',    new THREE.BufferAttribute( uvs,  2));
+    geometry.setAttribute( 'index',    new THREE.BufferAttribute( indices,  1));
+    geometry.computeVertexNormals();   
+    //geometry.translate( 0, 0, 0); 
+
+    let mat = new THREE.MeshLambertMaterial({map: buildTexture, side: THREE.DoubleSide});
+    mat.transparent = true;
+    mat.opacity = 1.0;
+
+    let triangleMesh = new THREE.Mesh( geometry, mat );
+    triangleMesh.castShadow = true
+    triangleMesh.receiveShadow = true;
+
+    return triangleMesh;
+}
+
+function mCreateEditConeMesh2(){
+    // z-x plane
+
+    let Lx = grid_size;
+    let Ly = gridH_size;
+    let Lz = grid_size;
+
+    const geometry = new THREE.BufferGeometry();
+    let vertices = new Float32Array(3*2*3); // 
+    let uvs = new Float32Array(3*2*2);
+    let indices = new Uint32Array(2*3);
+    let tri_coord = [ 
+        -Lx/2,  Ly/2, -Lz/2,
+        -Lx/2, -Ly/2,  Lz/2,
+         Lx/2,  Ly/2,  Lz/2,
+
+        -Lx/2,  Ly/2, -Lz/2,
+         Lx/2,  Ly/2,  Lz/2,
+         Lx/2, -Ly/2, -Lz/2,
+        ];
+    let uv_coord = [
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 1.0,
+
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0,
+    ];
+    for(var i=0; i<tri_coord.length; i++){
+        vertices[i] = tri_coord[i];
+    }
+    for(var i=0; i<uvs.length; i++){
+        uvs[i] = uv_coord[i];
+    }
+    for(var i=0; i<indices.length; i++){
+        indices[i] = i;
+    }
+
+    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    geometry.setAttribute( 'uv',    new THREE.BufferAttribute( uvs,  2));
+    geometry.setAttribute( 'index',    new THREE.BufferAttribute( indices,  1));
+    geometry.computeVertexNormals();   
+    //geometry.translate( 0, 0, 0); 
+
+    let mat = new THREE.MeshLambertMaterial({map: buildTexture, side: THREE.DoubleSide});
+    mat.transparent = true;
+    mat.opacity = 1.0;
+
+    let triangleMesh = new THREE.Mesh( geometry, mat );
+    triangleMesh.castShadow = true
+    triangleMesh.receiveShadow = true;
+
+    return triangleMesh;
+}
+
+function mCreateEditConeMesh3(){
+    // z-x plane
+
+    let Lx = grid_size;
+    let Ly = gridH_size;
+    let Lz = grid_size;
+
+    const geometry = new THREE.BufferGeometry();
+    let vertices = new Float32Array(3*2*3); // 
+    let uvs = new Float32Array(3*2*2);
+    let indices = new Uint32Array(2*3);
+    let tri_coord = [ 
+        -Lx/2, -Ly/2, -Lz/2,
+         Lx/2,  Ly/2,  Lz/2,
+         Lx/2,  Ly/2, -Lz/2,
+
+        -Lx/2, -Ly/2, -Lz/2,
+        -Lx/2,  Ly/2,  Lz/2,
+         Lx/2,  Ly/2,  Lz/2,
+        ];
+    let uv_coord = [
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 1.0,
+
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0,
+    ];
+    for(var i=0; i<tri_coord.length; i++){
+        vertices[i] = tri_coord[i];
+    }
+    for(var i=0; i<uvs.length; i++){
+        uvs[i] = uv_coord[i];
+    }
+    for(var i=0; i<indices.length; i++){
+        indices[i] = i;
+    }
+
+    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    geometry.setAttribute( 'uv',    new THREE.BufferAttribute( uvs,  2));
+    geometry.setAttribute( 'index',    new THREE.BufferAttribute( indices,  1));
+    geometry.computeVertexNormals();   
+    //geometry.translate( 0, 0, 0); 
+
+    let mat = new THREE.MeshLambertMaterial({map: buildTexture, side: THREE.DoubleSide});
+    mat.transparent = true;
+    mat.opacity = 1.0;
+
+    let triangleMesh = new THREE.Mesh( geometry, mat );
+    triangleMesh.castShadow = true
+    triangleMesh.receiveShadow = true;
+
+    return triangleMesh;
+}
+
+
+
+
 export { 
     mScale, 
     grid_size,
@@ -1417,5 +2199,10 @@ export {
     mCheckBuildIsConnected,
     mInitEditGrid,
     mEditGridSelected,
+    mEditSlopeGridSelected,
+    mEditConeGridSelected,
     mCreateWallEditShape,
+    mCreateFloorEditShape,
+    mCreateSlopeEditShape,
+    mCreateConeEditShape,
  };

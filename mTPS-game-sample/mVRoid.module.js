@@ -52,6 +52,7 @@ let array_url = [ //
         './model/vrma/CrouchWalkLeft-m.vrma', //10
         './model/vrma/RunningSlide-m.vrma',
         './model/vrma/AxeSwing-m.vrma',
+        './model/vrma/AxeEquip-m.vrma',
     ] 
 
 let arrayGltfVrma = [];
@@ -62,7 +63,7 @@ for(var i = 0; i < array_url.length; i++){
 }
 
 let mScale = 1;
-let model_scale_vrm = mScale / 1 * 1.1;
+let model_scale_vrm = mScale / 1 * 1.08; //1.1;
 const vrm = gltfVrm.userData.vrm;
 let modelVRM = vrm.scene;
 
@@ -336,7 +337,7 @@ let RfingerBones = [
 function mBindAnimationBones(actions, bones, type="include"){
     for(var i = 0; i < actions.length; i++){
 
-        if(i==12){
+        if(i==12 || i==13){
             return;
         }
 
@@ -389,6 +390,11 @@ arrayActionVRM[11].clampWhenFinished = true;
 arrayActionVRM[12].timeScale = 2.25 * 1.8;
 arrayActionVRM[12].setLoop(THREE.LoopOnce);
 arrayActionVRM[12].clampWhenFinished = true;
+
+arrayActionVRM[13].timeScale = 2.25 * 1.8;
+arrayActionVRM[13].setLoop(THREE.LoopOnce);
+arrayActionVRM[13].clampWhenFinished = true;
+
 
 function mSetPlayerAnimation(player, d){
 
@@ -553,6 +559,16 @@ function mSetPlayerAnimation(player, d){
         if( player.arrayAction[12].isRunning() && ( player.mode != 1 || player.weapon != 0 ) ){
             player.arrayAction[12].stop();
         }
+
+        if( player.weaponChange && player.weapon == 0 ){
+            console.log("axe equip");
+            player.weaponChange = false;
+            //if( player.arrayAction[13].isRunning() ){
+
+            //}
+            player.arrayAction[13].stop();
+            player.arrayAction[13].play();
+        }
         
         /*for(var i=0; i<player.arrayAction.length; i++){
             if(player.arrayAction[i]){
@@ -569,6 +585,13 @@ function mSetPlayerAnimation(player, d){
             return;
         }else{
             player.arrayAction[12].stop();
+        }
+
+        if( player.arrayAction[13].isRunning() ){
+            player.vrm.update( d );
+            return;
+        }else{
+            player.arrayAction[13].stop();
         }
 
 
