@@ -12,7 +12,7 @@ https://www.youtube.com/watch?v=4ibpZw-iq0U
 
 Note:  
 ・Now under development.  
-・Edit mode is only available for Wall. (floor, slope, cone coming soon)
+・Some edit patterns are not available for slope.
 
 
 
