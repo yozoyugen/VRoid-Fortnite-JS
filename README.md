@@ -1,5 +1,6 @@
 ## Summary
-The repo. dose not contain the third party's contents(3D model, sound, image, ... )  
+TPS game sample like Fortnite using Three.js, Rapier.js and VRoid 3D model. Implemented Fortnite build and edit function.  
+
   
 You can play at  
 https://opensource-lab.com/mTPS-game-sample/mVRoidnite.html  
@@ -13,6 +14,7 @@ https://www.youtube.com/watch?v=4ibpZw-iq0U
 
 ## Note  
 ・Now under development.  
+・The repo. dose not contain the third party's contents(3D model, sound, image, ... )  
 ・Some edit patterns are not available for slope.
 
 ## More information  
