@@ -6,6 +6,8 @@ I think we need some experience to make new original game.
 As you know, Fortnite is a huge hit game.  
 So, by creating and publishing a game that imitates Fortnite, we can get a lot of experience and learn a lot from it.  
 I think creating a game is not a goal but a start.  
+Because running a game is much harder than creating it.  
+Use this repository to help you take the next step towards running your game faster.  
 
   
 You can play at  
