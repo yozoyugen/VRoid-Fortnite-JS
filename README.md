@@ -20,7 +20,11 @@ https://www.youtube.com/watch?v=VdBK-gbMCwo
 
 https://www.youtube.com/watch?v=4ibpZw-iq0U    
 ![TPS-202505016-sum001](https://github.com/user-attachments/assets/19f89e2b-e8ae-47af-93b6-0b95bc228274)  
-
+  
+## Future works
+・Online multiplayer game using node.js, socket.io ...
+・Provide a repository which you can become a game owner just by uploading to a server.  
+  
 ## Note  
 ・Now under development.  
 ・The repo. dose not contain the third party's contents(3D model, sound, image, ... )  
