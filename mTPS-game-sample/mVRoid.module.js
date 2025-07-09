@@ -1,20 +1,29 @@
-import * as THREE from 'three/webgpu';
+import * as THREE from 'three';
+//import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { VRMLoaderPlugin, MToonMaterialLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 import { createVRMAnimationClip, VRMAnimationLoaderPlugin, VRMLookAtQuaternionProxy } from "@pixiv/three-vrm-animation";
 
+console.log("mVRoid.module.js")
+
+const textureLoader = new THREE.TextureLoader();
+
 const loaderGLTF = new GLTFLoader(); //THREE.GLTFLoader();
 loaderGLTF.crossOrigin = 'anonymous';
 
 loaderGLTF.register( ( parser ) => {
-    const mtoonMaterialPlugin = new MToonMaterialLoaderPlugin( parser, {
+
+    // mtoom material requires webGPUrenderer
+    /*const mtoonMaterialPlugin = new MToonMaterialLoaderPlugin( parser, {
         materialType: MToonNodeMaterial,
     } );
     return new VRMLoaderPlugin( parser, {
         mtoonMaterialPlugin,
-    } );
+    } );*/
+
+    return new VRMLoaderPlugin(parser);
 } );
 
 loaderGLTF.register( ( parser ) => {
@@ -24,8 +33,13 @@ loaderGLTF.register( ( parser ) => {
 
 //let array_gltfVrm = [];
 let modelURL = ['./model/669239405689726719.vrm',
+                './model/darkness000.vrm',
+                './model/shibu000.vrm',
                 './model/3658448283550216100.vrm',
+                './model/lowPoly_15k_5M.vrm',
 ];
+// './model/3658448283550216100mdf.vrm' -> transparency dose not work because it exported by Blender
+
 //for(var i=0; i<modelURL.length; i++){
 //    const gltfVrm = await loaderGLTF.loadAsync( modelURL[i] );
 //    array_gltfVrm.push(gltfVrm);
@@ -48,6 +62,10 @@ let array_url = [ //
         './model/vrma/RunningSlide-m.vrma',
         './model/vrma/AxeSwing-m.vrma',
         './model/vrma/AxeEquip-m.vrma',
+        './model/vrma/Damage-m.vrma',
+        './model/vrma/Dying-m.vrma', //15
+        './model/vrma/Reloading-m.vrma',
+        './model/vrma/GangnamStyle-m.vrma',
     ] 
 
 //let arrayGltfVrma = [];
@@ -61,6 +79,8 @@ let array_url = [ //
 
 
 async function mCreateVRM(characterType=0){
+
+    console.log("mVRoid::mCreateVRM")
 
     //setTimeout(() => {}, 3000);
 
@@ -115,7 +135,10 @@ async function mCreateVRM(characterType=0){
     
 
     let mScale = 1;
-    let model_scale_vrm = mScale / 1 * 1.08; //1.1;
+    let model_scale_vrm = mScale / 1 * 1.0; //1.1;
+    if(characterType==2){
+        model_scale_vrm = mScale / 1 * 1.3;
+    }
     const vrm = gltfVrm.userData.vrm;
     let modelVRM = vrm.scene;
 
@@ -140,7 +163,7 @@ async function mCreateVRM(characterType=0){
     } );
 
     let spjoint = vrm.springBoneManager._joints;
-    console.log( "spjoint", spjoint );
+    //console.log( "spjoint", spjoint );
     //console.log( spjoint.size );
 
     spjoint.forEach((element) => {
@@ -164,7 +187,22 @@ async function mCreateVRM(characterType=0){
     const fbxloader = new FBXLoader();
     let weaponMesh = new THREE.Group();
     weaponMesh.name = "Weapon";
-    fbxloader.load( 'model/Scar_11M.fbx', function ( object ) {  //Scar_L01
+
+    // muzzle flash
+    //const textureLoader = new THREE.TextureLoader();
+    const flashTexture = textureLoader.load('/mTPS-game-sample/image/flash2.png');
+    let flashMaterial = new THREE.MeshBasicMaterial({map: flashTexture, side:THREE.DoubleSide});
+    flashMaterial.opacity = 0.99;
+    flashMaterial.transparent = true;
+    flashMaterial.depthWrite = false; // This solved problem of transparancy texture's drawing distance
+    let flashMesh = new THREE.Mesh( new THREE.PlaneGeometry( 1300, 764 ), flashMaterial);
+    //flashMesh.scale.set(10, 10, 10);
+    flashMesh.scale.set(0.002, 0.002, 0.002);
+    flashMesh.rotation.y = Math.PI/2;
+    flashMesh.name = "Flash" 
+    flashMesh.visible = false;
+
+    fbxloader.load( 'model/Scar_resize1M.fbx', function ( object ) {  //Scar_11M, Scar_resize3M
 
         console.log("weapon:%o", object);
 
@@ -187,33 +225,72 @@ async function mCreateVRM(characterType=0){
         object.position.set(0.2, -0.0, 0.1);
         object.name = "Scar"
 
-        let muzzlePos = new THREE.Group();
+        /*let muzzlePos = new THREE.Group();
         muzzlePos.name = "MuzzlePos";
         muzzlePos.position.set(180*mScale, 1900*mScale, 3800*mScale);
-        let mesh = new THREE.Mesh(new THREE.SphereGeometry(100*mScale), new THREE.MeshBasicMaterial({color: 'orange'}))
-        muzzlePos.add(mesh);
+            //let mesh = new THREE.Mesh(new THREE.SphereGeometry(100*mScale), new THREE.MeshBasicMaterial({color: 'orange'}))
+            //muzzlePos.add(mesh);
         object.add(muzzlePos);
-        muzzlePos.visible = false;
+        //muzzlePos.visible = false;
+
+        muzzlePos.add(flashMesh); */
 
         weaponMesh.add(object)
         //weaponMesh.visible = false;
         
     } );
 
-    fbxloader.load( 'model/Axe.fbx', function ( object ) {  //
+    let muzzlePos = new THREE.Group();
+    muzzlePos.name = "MuzzlePos";
+    muzzlePos.position.set(0.6, 0, -0.1);
+        //let mesh = new THREE.Mesh(new THREE.SphereGeometry(100*mScale), new THREE.MeshBasicMaterial({color: 'orange'}))
+        //muzzlePos.add(mesh);
+    weaponMesh.add(muzzlePos);
+    //muzzlePos.visible = false;
+
+    muzzlePos.add(flashMesh);
+
+
+    fbxloader.load( 'model/shotgun.fbx', function ( object ) {  
+
         console.log("weapon:%o", object);
 
         object.traverse( function ( child ) {
-            console.log("child:", child.name);
+            if ( child.isMesh ) {
+                child.castShadow = true;
+                //child.receiveShadow = true;
+                child.material.side = THREE.DoubleSide;
+            }
+        } );
+        let w_scale = 0.001 / mScale;
+        //let w_scale = 0.0001 / mScale;
+        object.scale.set(w_scale, w_scale, w_scale);
+
+        //object.position.set(0.2, -0.2, -0.03);
+        object.position.set(0.2, -0.03, 0.18);
+        object.rotation.set( -Math.PI/2, 0, 0,"XYZ")
+        object.name = "Shotgun"
+
+        weaponMesh.add(object)
+        //weaponMesh.visible = false;
+        
+    } );
+
+
+    fbxloader.load( 'model/Axe.fbx', function ( object ) {  //
+        //console.log("weapon:%o", object);
+
+        object.traverse( function ( child ) {
+            //console.log("child:", child.name);
             if ( child.isMesh ) {
                 child.castShadow = true;
                 //child.receiveShadow = true;
                 //console.log("child:", child.name);
                 //child.material[0].side = THREE.DoubleSide;
                 if(child.material.name=="HANDLE"){
-                    console.log("child.material:", child.material);
+                    //console.log("child.material:", child.material);
                     child.material.side = THREE.DoubleSide;
-                    console.log("child.material.side:", child.material.side);
+                    //console.log("child.material.side:", child.material.side);
                 }
                 //console.log("child.material:", child.material);
             }
@@ -234,10 +311,10 @@ async function mCreateVRM(characterType=0){
     } );
 
     fbxloader.load( 'model/pensil.fbx', function ( object ) {  //
-        console.log("weapon:%o", object);
+        //console.log("weapon:%o", object);
 
         object.traverse( function ( child ) {
-            console.log("child:", child.name);
+            //console.log("child:", child.name);
             if ( child.isMesh ) {
                 child.castShadow = true;
                 //child.receiveShadow = true;
@@ -259,7 +336,7 @@ async function mCreateVRM(characterType=0){
     } );
 
     // Blueprint
-    const textureLoader = new THREE.TextureLoader();
+    //const textureLoader = new THREE.TextureLoader();
     const bpTexture = textureLoader.load('/mTPS-game-sample/image/fn_blueprint.jpg');
     let bpTempMaterial = new THREE.MeshBasicMaterial({map: bpTexture, side:THREE.DoubleSide});
     let bpMesh = new THREE.Mesh( new THREE.PlaneGeometry( 249*0.0015, 148*0.0015 ), bpTempMaterial);
@@ -307,6 +384,8 @@ async function mCreateVRM(characterType=0){
         let clip = createVRMAnimationClip( vrmAnimation, vrm );
         if(i==11){ // change duration of sliding
             clip = THREE.AnimationUtils.subclip(clip, 'Slide', 1, 27);
+        }else if(i==14){
+            clip = THREE.AnimationUtils.subclip(clip, 'Slide', 1, 15);
         }
         arrayActionVRM.push( mixerVRM.clipAction( clip ) );
     }
@@ -314,12 +393,19 @@ async function mCreateVRM(characterType=0){
    
     mBindAnimationBones(arrayActionVRM, targetBones, "exclude");
 
+    let a = [arrayActionVRM[16]];
+    mBindAnimationBones(a, targetBones, "include");
+
     arrayActionVRM[0].play();
 
     arrayActionVRM[5].setLoop(THREE.LoopOnce);
     arrayActionVRM[5].clampWhenFinished = true;
 
-    arrayActionVRM[10].timeScale = -1;
+    let c_crouch = 1.5;
+    arrayActionVRM[7].timeScale = c_crouch;
+    arrayActionVRM[8].timeScale = c_crouch;
+    arrayActionVRM[9].timeScale = c_crouch;
+    arrayActionVRM[10].timeScale = -c_crouch;
 
     arrayActionVRM[11].setLoop(THREE.LoopOnce);
     arrayActionVRM[11].clampWhenFinished = true;
@@ -331,6 +417,16 @@ async function mCreateVRM(characterType=0){
     arrayActionVRM[13].timeScale = 2.25 * 1.8;
     arrayActionVRM[13].setLoop(THREE.LoopOnce);
     arrayActionVRM[13].clampWhenFinished = true;
+
+    arrayActionVRM[14].setLoop(THREE.LoopOnce);
+    arrayActionVRM[14].clampWhenFinished = true;
+    arrayActionVRM[14].weight = 0.3;
+
+    arrayActionVRM[15].setLoop(THREE.LoopOnce);
+    arrayActionVRM[15].clampWhenFinished = true;
+
+
+    console.log("mVRoid::mCreateVRM END")
 
     return {vrm: vrm, arrayActionVRM: arrayActionVRM, mixerVRM:mixerVRM};
 }
@@ -414,8 +510,9 @@ let RfingerBones = [
 function mBindAnimationBones(actions, bones, type="include"){
     for(var i = 0; i < actions.length; i++){
 
-        if(i==12 || i==13){
-            return;
+        if( i>=12 ){
+            //return;
+            continue;
         }
 
         const filteredBindings = [];
@@ -453,7 +550,12 @@ function mBindAnimationBones(actions, bones, type="include"){
 
 function mSetPlayerAnimation(player, d){
 
-    if( player.model.getObjectByName("Scar") == null ||
+    if(player.vrm == null){
+        return
+    }
+
+    if( player.model.getObjectByName("Shotgun") == null ||
+        player.model.getObjectByName("Scar") == null ||
         player.model.getObjectByName("Axe") == null ||
         player.model.getObjectByName("Pensil") == null ||
         player.model.getObjectByName("BluePrint") == null ){
@@ -462,6 +564,7 @@ function mSetPlayerAnimation(player, d){
         return
     }
 
+    player.model.getObjectByName("Shotgun").visible = false;
     player.model.getObjectByName("Scar").visible = false;
     player.model.getObjectByName("Axe").visible = false;
     player.model.getObjectByName("Pensil").visible = false;
@@ -471,6 +574,8 @@ function mSetPlayerAnimation(player, d){
         if(player.weapon==0){
             player.model.getObjectByName("Axe").visible = true;
         }else if(player.weapon==1){
+            player.model.getObjectByName("Shotgun").visible = true;
+        }else if(player.weapon==2){
             player.model.getObjectByName("Scar").visible = true;
         }
     }else if(player.mode==2 || player.mode==3){
@@ -605,7 +710,7 @@ function mSetPlayerAnimation(player, d){
             
         }
 
-        if( player.mode == 1 && player.weapon == 0 && player.isFiring){
+        if( player.mode == 1 && player.weapon == 0 && player.isFiring && player.weaponIsReady){
             //console.log("swing");
             player.arrayAction[12].play();
             //player.vrm.update( d );
@@ -615,8 +720,8 @@ function mSetPlayerAnimation(player, d){
             player.arrayAction[12].stop();
         }
 
-        if( player.weaponChange && player.weapon == 0 ){
-            console.log("axe equip");
+        if( player.weaponChange && (player.weapon == 0 || player.weapon == 1 || player.weapon == 2) ){
+            //console.log("axe equip");
             player.weaponChange = false;
             //if( player.arrayAction[13].isRunning() ){
 
@@ -624,7 +729,41 @@ function mSetPlayerAnimation(player, d){
             player.arrayAction[13].stop();
             player.arrayAction[13].play();
         }
-        
+
+        if( player.receivedDamage  ){
+            console.log("receivedDamage");
+            player.receivedDamage = false;
+            if(!player.isFiring){
+                player.arrayAction[14].stop();
+                player.arrayAction[14].play();
+            }
+        }
+
+        if( player.nowReloading ){
+            player.arrayAction[16].play();
+        }else{
+            player.arrayAction[16].stop();
+        }
+
+        if( player.isEmote ){
+            player.arrayAction[0].stop();
+            player.arrayAction[17].play();
+        }else{
+            player.arrayAction[17].stop();
+        }
+
+        if( player.health <= 0  ){
+            //console.log("dead");
+            for(var i=0; i<player.arrayAction.length; i++){
+                if(i!=15){
+                    player.arrayAction[i].stop();
+                }
+            }            
+            player.arrayAction[15].play();
+        }
+
+
+
         /*for(var i=0; i<player.arrayAction.length; i++){
             if(player.arrayAction[i]){
                 if(player.arrayAction[i].isRunning()){
@@ -648,6 +787,35 @@ function mSetPlayerAnimation(player, d){
         }else{
             player.arrayAction[13].stop();
         }
+
+        if( player.arrayAction[14].isRunning() ){
+            player.vrm.update( d );
+            return;
+        }else{
+            player.arrayAction[14].stop();
+        }
+
+        if( player.arrayAction[15].isRunning() ){
+            player.vrm.update( d );
+            return;
+        }else{
+            //player.arrayAction[15].stop();
+        }
+
+        if( player.arrayAction[16].isRunning() ){
+            player.vrm.update( d );
+            return;
+        }else{
+            player.arrayAction[16].stop();
+        }
+
+        if( player.arrayAction[17].isRunning() ){
+            player.vrm.update( d );
+            return;
+        }else{
+            player.arrayAction[17].stop();
+        }
+
 
         let vrm = player.vrm;
         let weaponMesh = vrm.scene.getObjectByName("Weapon")
@@ -705,8 +873,12 @@ function mSetPlayerAnimation(player, d){
             bone = vrm.scene.getObjectByName("Normalized_J_Bip_L_Hand")
             bone.rotation.set( 0, 0, 0,"ZYX")
 
-        }else if(player.mode==1 && player.weapon==1 && !player.isFiring && !player.isAiming){
-            weaponMesh.getObjectByName("Scar").visible = true;
+        }else if(player.mode==1 && (player.weapon==1 || player.weapon==2 ) && !player.isFiring && !player.isAiming){
+            if(player.weapon==1){
+                weaponMesh.getObjectByName("Shotgun").visible = true;
+            }else if(player.weapon==2){
+                weaponMesh.getObjectByName("Scar").visible = true;
+            }
             
             let bone = vrm.scene.getObjectByName("Normalized_J_Bip_R_UpperArm")
             bone.rotation.set( 0, Math.PI/2*0.5, -Math.PI/2*0.7,"YZX")
@@ -730,8 +902,12 @@ function mSetPlayerAnimation(player, d){
             //bone = vrm.scene.getObjectByName("Normalized_J_Bip_C_Head")
             //bone.rotation.set( Math.PI/2*0.2, Math.PI/2*0.2, 0,"XYZ")	
 					
-		}else if(player.mode==1 && player.weapon==1 && (player.isFiring || player.isAiming ) ){
-            weaponMesh.getObjectByName("Scar").visible = true;
+		}else if(player.mode==1 && (player.weapon==1 || player.weapon==2 ) && (player.isFiring || player.isAiming ) ){
+            if(player.weapon==1){
+                weaponMesh.getObjectByName("Shotgun").visible = true;
+            }else if(player.weapon==2){
+                weaponMesh.getObjectByName("Scar").visible = true;
+            }
 
             let bone = vrm.scene.getObjectByName("Normalized_J_Bip_R_UpperArm")
             bone.rotation.set( 0, Math.PI/2*0.7, -Math.PI/2*0.0,"YZX")
@@ -794,7 +970,6 @@ function mSetPlayerAnimation(player, d){
                     bone.rotation.set( 0, 0, 0,"XYZ")
                 }
             }
-            
             
             if(!player.isGrounded){
                 bone = vrm.scene.getObjectByName("Normalized_J_Bip_R_Shoulder")
@@ -920,6 +1095,7 @@ function mSetPlayerAnimation(player, d){
 
 }
 
+console.log("mVRoid.module.js END")
 
 export { 
     //loaderGLTF,

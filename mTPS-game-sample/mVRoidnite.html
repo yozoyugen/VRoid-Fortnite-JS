@@ -45,7 +45,7 @@
         {
             "imports": {
                 "@dimforge/rapier3d-compat": "https://esm.sh/@dimforge/rapier3d-compat@0.13.1",
-                "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.webgpu.js",
+                "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
                 "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.webgpu.js",
                 "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
                 "@pixiv/three-vrm": "../mTPS-game-sample/lib/three-vrm.module.js",
@@ -73,7 +73,8 @@
 <body>
     <div id="main_canvas">
         <canvas id="canvas" style="position: absolute; z-index:1;" ></canvas>        
-        <canvas id="canvas-2d" style="position:absolute; z-index:2;" ></canvas>        
+        <canvas id="canvas-damage" style="position: absolute; z-index:2;" ></canvas>        
+        <canvas id="canvas-2d" style="position:absolute; z-index:10;" ></canvas>        
 
         <!-- <center>
             <button id="start" style="position: absolute; z-index:3;">Start</button> 

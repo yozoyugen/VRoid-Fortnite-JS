@@ -1,4 +1,5 @@
-import * as THREE from 'three/webgpu';
+import * as THREE from 'three';
+//import * as THREE from 'three/webgpu';
 
 
 let mScale = 1;
