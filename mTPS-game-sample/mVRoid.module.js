@@ -33,10 +33,7 @@ loaderGLTF.register( ( parser ) => {
 
 //let array_gltfVrm = [];
 let modelURL = ['./model/669239405689726719.vrm',
-                './model/darkness000.vrm',
-                './model/shibu000.vrm',
                 './model/3658448283550216100.vrm',
-                './model/lowPoly_15k_5M.vrm',
 ];
 // './model/3658448283550216100mdf.vrm' -> transparency dose not work because it exported by Blender
 
