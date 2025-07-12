@@ -1,5 +1,5 @@
 ## Summary
-TPS game sample like Fortnite using Three.js, Rapier.js and VRoid 3D model.  
+Javascript TPS game sample like Fortnite using Three.js, Rapier.js and VRoid 3D model.  
 Implemented Fortnite build and edit function.  
 The reason for releasing this repository is to help developers who want to make TPS games.  
 I think we need some experience to make new original game.  
