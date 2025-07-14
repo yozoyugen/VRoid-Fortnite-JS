@@ -1,3 +1,7 @@
+## Recent update  
+https://youtu.be/jYHAuPtDNxQ  
+![vroidnite_20250709_ss](https://github.com/user-attachments/assets/e85634ba-3ebc-49dd-a2db-aa5d4798bd35)  
+
 ## Summary
 Javascript TPS game sample like Fortnite using Three.js, Rapier.js and VRoid 3D model.  
 Implemented Fortnite build and edit function.  
