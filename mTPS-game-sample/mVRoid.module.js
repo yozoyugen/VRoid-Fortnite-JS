@@ -33,7 +33,10 @@ loaderGLTF.register( ( parser ) => {
 
 //let array_gltfVrm = [];
 let modelURL = ['./model/669239405689726719.vrm',
+                './model/darkness000.vrm',
+                './model/shibu000.vrm',
                 './model/3658448283550216100.vrm',
+                './model/lowPoly_15k_5M.vrm',
 ];
 // './model/3658448283550216100mdf.vrm' -> transparency dose not work because it exported by Blender
 
@@ -63,6 +66,7 @@ let array_url = [ //
         './model/vrma/Dying-m.vrma', //15
         './model/vrma/Reloading-m.vrma',
         './model/vrma/GangnamStyle-m.vrma',
+        './model/vrma/DancingRunningMan-m.vrma',
     ] 
 
 //let arrayGltfVrma = [];
@@ -742,11 +746,18 @@ function mSetPlayerAnimation(player, d){
             player.arrayAction[16].stop();
         }
 
-        if( player.isEmote ){
+        if( player.isEmote && player.emoteIndex == 0 ){
             player.arrayAction[0].stop();
             player.arrayAction[17].play();
         }else{
             player.arrayAction[17].stop();
+        }
+
+        if( player.isEmote && player.emoteIndex == 1 ){
+            player.arrayAction[0].stop();
+            player.arrayAction[18].play();
+        }else{
+            player.arrayAction[18].stop();
         }
 
         if( player.health <= 0  ){
@@ -811,6 +822,13 @@ function mSetPlayerAnimation(player, d){
             return;
         }else{
             player.arrayAction[17].stop();
+        }
+
+        if( player.arrayAction[18].isRunning() ){
+            player.vrm.update( d );
+            return;
+        }else{
+            player.arrayAction[18].stop();
         }
 
 
